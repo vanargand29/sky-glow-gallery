@@ -285,14 +285,20 @@ const AdminDashboard = () => {
       }
       
       if (categoryForm.id) {
-        // Update category
+        // Update category - only update image_url if a new image was uploaded
+        const updateData: any = {
+          name: categoryForm.name,
+          description: categoryForm.description
+        };
+        
+        // Only update image_url if a new image was uploaded
+        if (categoryImageFile) {
+          updateData.image_url = imageUrl;
+        }
+        
         const { error } = await supabase
           .from('categories')
-          .update({
-            name: categoryForm.name,
-            description: categoryForm.description,
-            image_url: imageUrl || null
-          })
+          .update(updateData)
           .eq('id', categoryForm.id);
 
         if (error) throw error;
@@ -509,14 +515,20 @@ const AdminDashboard = () => {
       }
       
       if (gameForm.id) {
-        // Update game
+        // Update game - only update image_url if a new image was uploaded
+        const updateData: any = {
+          name: gameForm.name,
+          description: gameForm.description
+        };
+        
+        // Only update image_url if a new image was uploaded
+        if (gameImageFile) {
+          updateData.image_url = imageUrl;
+        }
+        
         const { error } = await supabase
           .from('games')
-          .update({
-            name: gameForm.name,
-            description: gameForm.description,
-            image_url: imageUrl || null
-          })
+          .update(updateData)
           .eq('id', gameForm.id);
 
         if (error) throw error;
@@ -570,16 +582,22 @@ const AdminDashboard = () => {
       }
       
       if (gameItemForm.id) {
-        // Update game item
+        // Update game item - only update image_url if a new image was uploaded
+        const updateData: any = {
+          name: gameItemForm.name,
+          description: gameItemForm.description,
+          price: parseFloat(gameItemForm.price),
+          game_id: gameItemForm.game_id
+        };
+        
+        // Only update image_url if a new image was uploaded
+        if (gameItemImageFile) {
+          updateData.image_url = imageUrl;
+        }
+        
         const { error } = await supabase
           .from('game_items')
-          .update({
-            name: gameItemForm.name,
-            description: gameItemForm.description,
-            price: parseFloat(gameItemForm.price),
-            game_id: gameItemForm.game_id,
-            image_url: imageUrl || null
-          })
+          .update(updateData)
           .eq('id', gameItemForm.id);
 
         if (error) throw error;

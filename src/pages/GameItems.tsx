@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowLeft, ShoppingCart, Star, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -27,16 +34,31 @@ const GameItems = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string>('newest');
   const { toast } = useToast();
 
-  // Filtered items based on search query
-  const filteredGameItems = gameItems.filter(item => {
-    if (searchQuery === '') return true;
-    return item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           searchQuery.toLowerCase().split(' ').every(word => 
-             item.name.toLowerCase().includes(word)
-           );
-  });
+  // Sort and filter items
+  const filteredAndSortedGameItems = gameItems
+    .filter(item => {
+      if (searchQuery === '') return true;
+      return item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+             searchQuery.toLowerCase().split(' ').every(word => 
+               item.name.toLowerCase().includes(word)
+             );
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'name_asc':
+          return a.name.localeCompare(b.name);
+        case 'price_desc':
+          return b.price - a.price;
+        case 'price_asc':
+          return a.price - b.price;
+        case 'newest':
+        default:
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      }
+    });
 
   useEffect(() => {
     if (gameId) {
@@ -127,23 +149,40 @@ const GameItems = () => {
             Dapatkan item terbaik dengan harga terjangkau dan delivery tercepat!
           </p>
           
-          {/* Search Input */}
-          <div className="max-w-md mx-auto">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Cari item... (contoh: Robux 500 atau 500 Robux)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-full"
-              />
+          {/* Search and Sort */}
+          <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-6">
+            <div className="w-full md:w-96">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Cari item... (contoh: Robux 500 atau 500 Robux)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 w-full"
+                />
+              </div>
             </div>
-            {searchQuery && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Hasil pencarian "{searchQuery}": {filteredGameItems.length} item ditemukan
-              </p>
-            )}
+            
+            <div className="w-full md:w-48">
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Urutkan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Terbaru</SelectItem>
+                  <SelectItem value="name_asc">Nama (A-Z)</SelectItem>
+                  <SelectItem value="price_desc">Harga Tertinggi</SelectItem>
+                  <SelectItem value="price_asc">Harga Terendah</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+          
+          {searchQuery && (
+            <p className="text-sm text-muted-foreground mt-2 text-center">
+              Hasil pencarian "{searchQuery}": {filteredAndSortedGameItems.length} item ditemukan
+            </p>
+          )}
         </div>
 
         {/* Game Items Grid */}
@@ -155,7 +194,7 @@ const GameItems = () => {
               Items untuk game ini akan ditampilkan di sini setelah admin menambahkannya.
             </p>
           </div>
-        ) : filteredGameItems.length === 0 ? (
+        ) : filteredAndSortedGameItems.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-xl font-semibold mb-2">Tidak ada item yang ditemukan</h3>
@@ -165,7 +204,7 @@ const GameItems = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGameItems.map((item) => (
+            {filteredAndSortedGameItems.map((item) => (
               <Card key={item.id} className="game-card group overflow-hidden">
                 <div className="relative h-48 overflow-hidden">
                   {item.image_url ? (

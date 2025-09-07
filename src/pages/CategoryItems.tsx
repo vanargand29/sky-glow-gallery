@@ -4,6 +4,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, ShoppingCart, Search, X } from 'lucide-react';
@@ -28,16 +35,31 @@ const CategoryItems = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string>('newest');
   const categoryName = location.state?.categoryName || 'Kategori';
 
-  // Filtered items based on search query
-  const filteredItems = items.filter(item => {
-    if (searchQuery === '') return true;
-    return item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           searchQuery.toLowerCase().split(' ').every(word => 
-             item.name.toLowerCase().includes(word)
-           );
-  });
+  // Sort and filter items
+  const filteredAndSortedItems = items
+    .filter(item => {
+      if (searchQuery === '') return true;
+      return item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+             searchQuery.toLowerCase().split(' ').every(word => 
+               item.name.toLowerCase().includes(word)
+             );
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'name_asc':
+          return a.name.localeCompare(b.name);
+        case 'price_desc':
+          return b.price - a.price;
+        case 'price_asc':
+          return a.price - b.price;
+        case 'newest':
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
 
   useEffect(() => {
     if (categoryId) {
@@ -111,23 +133,40 @@ const CategoryItems = () => {
               Item premium tersedia untuk kategori ini
             </p>
             
-            {/* Search Input */}
-            <div className="max-w-md mx-auto">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Cari item... (contoh: Cape atau Sunlight)"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-full"
-                />
+            {/* Search and Sort */}
+            <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-6">
+              <div className="w-full md:w-96">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Cari item... (contoh: Cape atau Sunlight)"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 w-full"
+                  />
+                </div>
               </div>
-              {searchQuery && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  Hasil pencarian "{searchQuery}": {filteredItems.length} item ditemukan
-                </p>
-              )}
+              
+              <div className="w-full md:w-48">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Urutkan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Terbaru</SelectItem>
+                    <SelectItem value="name_asc">Nama (A-Z)</SelectItem>
+                    <SelectItem value="price_desc">Harga Tertinggi</SelectItem>
+                    <SelectItem value="price_asc">Harga Terendah</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            
+            {searchQuery && (
+              <p className="text-sm text-muted-foreground mt-2 text-center">
+                Hasil pencarian "{searchQuery}": {filteredAndSortedItems.length} item ditemukan
+              </p>
+            )}
           </div>
         </div>
 
@@ -136,7 +175,7 @@ const CategoryItems = () => {
           <div className="text-center py-12">
             <p className="text-muted-foreground text-lg">Belum ada item tersedia untuk kategori ini.</p>
           </div>
-        ) : filteredItems.length === 0 ? (
+        ) : filteredAndSortedItems.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-xl font-semibold mb-2">Tidak ada item yang ditemukan</h3>
@@ -146,7 +185,7 @@ const CategoryItems = () => {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredItems.map((item) => (
+            {filteredAndSortedItems.map((item) => (
               <Card key={item.id} className="game-card group overflow-hidden hover:shadow-lg transition-all duration-300">
                 <div className="relative h-48 overflow-hidden">
                   {item.image_url ? (

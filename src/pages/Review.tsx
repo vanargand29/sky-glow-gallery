@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -7,15 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Star, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Review {
-  id: number;
+  id: string;
   name: string;
   email: string;
   rating: number;
   description: string;
-  image?: string;
-  date: string;
+  image_url?: string;
+  created_at: string;
 }
 
 const Review = () => {
@@ -31,25 +32,40 @@ const Review = () => {
     description: ""
   });
 
-  // Mock reviews data
-  const [reviews, setReviews] = useState<Review[]>([
-    {
-      id: 1,
-      name: "Ahmad Rizki",
-      email: "ah***@gmail.com",
-      rating: 5,
-      description: "Pelayanan sangat memuaskan! Item yang dibeli sesuai dengan deskripsi dan pengiriman cepat.",
-      date: "2025-01-15"
-    },
-    {
-      id: 2,
-      name: "Sari Dewi",
-      email: "sa**@yahoo.com",
-      rating: 4,
-      description: "Kualitas item bagus, harga sesuai. Akan berbelanja lagi di sini.",
-      date: "2025-01-10"
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch reviews from Supabase
+  useEffect(() => {
+    fetchReviews();
+  }, []);
+
+  const fetchReviews = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formattedReviews = data.map(review => ({
+        ...review,
+        email: censorEmail(review.email)
+      }));
+
+      setReviews(formattedReviews);
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat reviews",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   const censorEmail = (email: string) => {
     const [username, domain] = email.split('@');
@@ -78,7 +94,7 @@ const Review = () => {
     setImagePreview(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate required fields
@@ -91,30 +107,50 @@ const Review = () => {
       return;
     }
 
-    // Create new review
-    const newReview: Review = {
-      id: Date.now(),
-      name: formData.name,
-      email: censorEmail(formData.email),
-      rating,
-      description: formData.description,
-      image: imagePreview || undefined,
-      date: new Date().toISOString().split('T')[0]
-    };
+    try {
+      // Insert new review to Supabase
+      const { data, error } = await supabase
+        .from('reviews')
+        .insert([
+          {
+            name: formData.name,
+            email: formData.email,
+            rating,
+            description: formData.description,
+            image_url: imagePreview || null
+          }
+        ])
+        .select()
+        .single();
 
-    setReviews([newReview, ...reviews]);
-    
-    // Reset form
-    setFormData({ name: "", email: "", description: "" });
-    setRating(0);
-    setSelectedImage(null);
-    setImagePreview(null);
-    setIsDialogOpen(false);
+      if (error) throw error;
 
-    toast({
-      title: "Berhasil!",
-      description: "Review Anda telah berhasil ditambahkan",
-    });
+      // Add the new review to local state with censored email
+      const newReview = {
+        ...data,
+        email: censorEmail(data.email)
+      };
+      setReviews([newReview, ...reviews]);
+      
+      // Reset form
+      setFormData({ name: "", email: "", description: "" });
+      setRating(0);
+      setSelectedImage(null);
+      setImagePreview(null);
+      setIsDialogOpen(false);
+
+      toast({
+        title: "Berhasil!",
+        description: "Review Anda telah berhasil ditambahkan",
+      });
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      toast({
+        title: "Error",
+        description: "Gagal menambahkan review",
+        variant: "destructive"
+      });
+    }
   };
 
   const renderStars = (currentRating: number, interactive = false) => {
@@ -273,7 +309,11 @@ const Review = () => {
 
         {/* Reviews List */}
         <div className="space-y-6">
-          {reviews.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg">Loading reviews...</p>
+            </div>
+          ) : reviews.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">No reviews yet.</p>
             </div>
@@ -287,16 +327,18 @@ const Review = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex">{renderStars(review.rating)}</div>
-                    <span className="text-sm text-muted-foreground">{review.date}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(review.created_at).toLocaleDateString('id-ID')}
+                    </span>
                   </div>
                 </div>
                 
                 <p className="text-muted-foreground mb-4">{review.description}</p>
                 
-                {review.image && (
+                {review.image_url && (
                   <div className="mt-4">
                     <img
-                      src={review.image}
+                      src={review.image_url}
                       alt="Review image"
                       className="max-w-xs h-32 object-cover rounded-lg"
                     />

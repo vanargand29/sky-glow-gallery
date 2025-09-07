@@ -3,36 +3,63 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Header from "./components/Header";
+import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Sky from "./pages/Sky";
+import SkyCategories from "./pages/SkyCategories";
+import CategoryItems from "./pages/CategoryItems";
 import SunlightItems from "./pages/SunlightItems";
-import Roblox from "./pages/Roblox";
+import Games from "./pages/Roblox";
+import GameItems from "./pages/GameItems";
 import Review from "./pages/Review";
+import AdminLogin from "./pages/AdminLogin";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <div className="dark min-h-screen bg-background text-foreground">
-          <Header />
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/sky" element={<Sky />} />
-            <Route path="/sky/sunlight" element={<SunlightItems />} />
-            <Route path="/roblox" element={<Roblox />} />
-            <Route path="/review" element={<Review />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </div>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <div className="dark min-h-screen bg-background text-foreground">
+            <Header />
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/sky" element={<Sky />} />
+              <Route path="/sky/categories" element={<SkyCategories />} />
+              <Route path="/sky/category/:categoryId" element={<CategoryItems />} />
+              <Route path="/sky/sunlight" element={<SunlightItems />} />
+              <Route path="/roblox" element={<Games />} />
+              <Route path="/games" element={<Games />} />
+              <Route path="/games/:gameId" element={<GameItems />} />
+              <Route path="/review" element={<Review />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route 
+                path="/admin/dashboard" 
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <Footer />
+          </div>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

@@ -12,27 +12,24 @@ const ImagePopup = ({ src, alt, isOpen, onClose }: ImagePopupProps) => {
   if (!isOpen) return null;
 
   return (
-    <div className="popup-overlay" onClick={onClose}>
-      <div className="popup-content" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-foreground">{alt}</h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-        
-        <div className="aspect-video w-full overflow-hidden rounded-lg">
-          <img
-            src={src}
-            alt={alt}
-            className="w-full h-full object-cover"
-          />
-        </div>
+    <div 
+      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div className="relative max-w-4xl max-h-full" onClick={(e) => e.stopPropagation()}>
+        <Button
+          variant="outline"
+          size="icon"
+          className="absolute -top-12 right-0 bg-white/10 border-white/20 text-white hover:bg-white/20"
+          onClick={onClose}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+        <img
+          src={src}
+          alt={alt}
+          className="max-w-full max-h-full object-contain rounded-lg"
+        />
       </div>
     </div>
   );

@@ -1,12 +1,36 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Gamepad2, Star, TrendingUp, Users, Zap } from "lucide-react";
-import skyHero from "@/assets/sky-hero.jpg";
+import { supabase } from "@/integrations/supabase/client";
+import skyHero from "@/assets/sky-hero.png";
+import rbLx from "@/assets/rblx.png";
 
 const Home = () => {
   const navigate = useNavigate();
+  const [robloxGameId, setRobloxGameId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchRobloxGameId();
+  }, []);
+
+  const fetchRobloxGameId = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select('id')
+        .ilike('name', '%roblox%')
+        .single();
+      
+      if (data) {
+        setRobloxGameId(data.id);
+      }
+    } catch (error) {
+      console.error('Error fetching Roblox game ID:', error);
+    }
+  };
 
   const features = [
     {
@@ -30,7 +54,7 @@ const Home = () => {
     {
       name: "Sky: Children of The Light",
       category: "Adventure",
-      rating: 4.9,
+      rating: 4.2,
       players: "1M+",
       image: skyHero,
       path: "/sky"
@@ -38,10 +62,10 @@ const Home = () => {
     {
       name: "Roblox",
       category: "Sandbox",
-      rating: 4.8,
+      rating: 4.5,
       players: "500K+",
-      image: skyHero,
-      path: "/roblox"
+      image: rbLx,
+      path: robloxGameId ? `/games/${robloxGameId}` : "/roblox"
     }
   ];
 
@@ -70,10 +94,10 @@ const Home = () => {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
-                onClick={() => navigate('/sky')}
+                onClick={() => window.open('https://wa.me/6289504041209?text=Halo, saya tertarik dengan produk di J Store', '_blank')}
                 className="btn-primary text-lg px-8 py-4"
               >
-                🎮 Explore Games
+                🎮 Buy Now
               </Button>
               <Button 
                 variant="outline"
@@ -144,7 +168,10 @@ const Home = () => {
                     </div>
                   </div>
                   
-                  <Button className="w-full mt-4 btn-primary">
+                  <Button 
+                    className="w-full mt-4 btn-primary"
+                    onClick={() => navigate(game.path)}
+                  >
                     Explore Game
                   </Button>
                 </div>

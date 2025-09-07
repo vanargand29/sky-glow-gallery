@@ -1,54 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Star, Clock } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Star, Eye } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import ImagePopup from "@/components/ImagePopup";
 import skyHero from "@/assets/sky-hero.jpg";
-import sunlightIcon from "@/assets/sunlight-icon.jpg";
-import moonlightIcon from "@/assets/moonlight-icon.jpg";
-import seasonPassIcon from "@/assets/season-pass-icon.jpg";
+
+interface Category {
+  id: string;
+  name: string;
+  description: string;
+  image_url?: string;
+  created_at: string;
+}
 
 const Sky = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [popupImage, setPopupImage] = useState<{ src: string; alt: string } | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const events = [
-    {
-      id: "sunlight",
-      title: "Days of Sunlight",
-      type: "Event",
-      description: "Days of Sunlight merupakan acara tahunan yang merayakan kebahagiaan musim panas dengan mengajak para pemain untuk bersantai di bawah sinar matahari.",
-      image: sunlightIcon,
-      date: "01 September 2025",
-      color: "bg-orange"
-    },
-    {
-      id: "moonlight", 
-      title: "Days of Moonlight",
-      type: "Event",
-      description: "Days of Moonlight memulai debutnya, mengundang pemain untuk menikmati keindahan bulan purnama dan cahaya lembut yang bersinar.",
-      image: moonlightIcon,
-      date: "29 September 2025",
-      color: "bg-purple"
-    },
-    {
-      id: "season-pass",
-      title: "Season Pass",
-      type: "Limited",
-      description: "Pemegang Season Pass akan mendapatkan konten musiman khusus dan membuka kesempatan untuk mengumpulkan item kosmetik unik.",
-      image: seasonPassIcon,
-      date: "21 Juli 2025",
-      color: "bg-red"
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat kategori",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const handleImageClick = (src: string, alt: string) => {
     setPopupImage({ src, alt });
   };
 
-  const handleViewIAP = (eventId: string) => {
-    navigate(`/sky/${eventId}`);
+  const handleViewItems = (categoryId: string, categoryName: string) => {
+    navigate(`/sky/category/${categoryId}`, { 
+      state: { categoryName } 
+    });
   };
 
   return (
@@ -57,99 +65,99 @@ const Sky = () => {
       <section className="relative py-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-background via-card to-secondary/20"></div>
         <div className="container mx-auto px-4 relative z-10">
-          <div className="flex flex-col lg:flex-row items-center gap-12">
-            <div className="flex-1 text-center lg:text-left">
-              <div className="flex flex-wrap gap-2 justify-center lg:justify-start mb-6">
-                <Badge variant="secondary" className="bg-accent/20 text-accent border-accent/30">
-                  <Star className="w-3 h-3 mr-1" />
-                  Event
-                </Badge>
-                <Badge variant="secondary" className="bg-purple/20 text-purple border-purple/30">
-                  Limited
-                </Badge>
-                <Badge variant="secondary" className="bg-gold/20 text-gold border-gold/30">
-                  <Clock className="w-3 h-3 mr-1" />
-                  Season
-                </Badge>
-              </div>
-              
-              <h1 className="text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
-                SKY: CHILDREN OF THE LIGHT ⚡
-              </h1>
-              
-              <p className="text-xl text-muted-foreground mb-4">
-                Kumpulan macam-macam event yang terdapat di game sky.
-              </p>
-              <p className="text-lg text-muted-foreground mb-8">
-                klik lihat iap untuk melihat IAP beserta harganya.
-              </p>
+          <div className="text-center max-w-4xl mx-auto">
+            <div className="flex flex-wrap gap-2 justify-center mb-6">
+              <Badge variant="secondary" className="bg-accent/20 text-accent border-accent/30">
+                <Star className="w-3 h-3 mr-1" />
+                Premium Items
+              </Badge>
+              <Badge variant="secondary" className="bg-purple/20 text-purple border-purple/30">
+                Categories
+              </Badge>
+              <Badge variant="secondary" className="bg-gold/20 text-gold border-gold/30">
+                <Eye className="w-3 h-3 mr-1" />
+                IAP Store
+              </Badge>
             </div>
             
-            <div className="flex-1">
-              <div 
-                className="relative rounded-2xl overflow-hidden cursor-pointer transform hover:scale-105 transition-all duration-300"
-                onClick={() => handleImageClick(skyHero, "Sky: Children of the Light")}
-              >
-                <img
-                  src={skyHero}
-                  alt="Sky: Children of the Light"
-                  className="w-full h-96 object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
-              </div>
-            </div>
+            <h1 className="text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
+              SKY: CHILDREN OF THE LIGHT ⚡
+            </h1>
+            
+            <p className="text-xl text-muted-foreground mb-4">
+              Pilih kategori untuk melihat item premium yang tersedia
+            </p>
+            <p className="text-lg text-muted-foreground mb-8">
+              Klik "Lihat IAP" untuk melihat item dan harganya.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* Events Section */}
+      {/* Categories Section */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-4">Mengapa Memilih Kami?</h2>
+          <h2 className="text-3xl font-bold text-center mb-4">Kategori Item Premium</h2>
           <p className="text-center text-muted-foreground mb-12">
-            Bergabunglah yang terdepan dari berbagai
+            Pilih kategori untuk melihat koleksi item eksklusif
           </p>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {events.map((event) => (
-              <div key={event.id} className="game-card group">
-                <div 
-                  className="relative mb-4 rounded-lg overflow-hidden cursor-pointer"
-                  onClick={() => handleImageClick(event.image, event.title)}
-                >
-                  <img
-                    src={event.image}
-                    alt={event.title}
-                    className="w-full h-48 object-cover transform group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="absolute top-3 left-3">
-                    <Badge className={`${event.color} text-white border-0`}>
-                      {event.type}
-                    </Badge>
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-accent mx-auto"></div>
+              <p className="mt-4 text-muted-foreground">Loading categories...</p>
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg">Belum ada kategori tersedia.</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {categories.map((category) => (
+                <Card key={category.id} className="game-card group cursor-pointer overflow-hidden hover:shadow-lg transition-all duration-300">
+                  <div className="relative h-48 overflow-hidden">
+                    {category.image_url ? (
+                      <img
+                        src={category.image_url}
+                        alt={category.name}
+                        className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleImageClick(category.image_url!, category.name);
+                        }}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder.svg';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center">
+                        <div className="text-6xl opacity-50">🎮</div>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <h3 className="text-xl font-bold text-white mb-2">{category.name}</h3>
+                    </div>
                   </div>
-                </div>
-
-                <h3 className="text-xl font-bold mb-3">{event.title}</h3>
-                <p className="text-muted-foreground mb-4 text-sm leading-relaxed">
-                  {event.description}
-                </p>
-
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    {event.date}
-                  </div>
-                </div>
-
-                <Button 
-                  onClick={() => handleViewIAP(event.id)}
-                  className="w-full btn-primary"
-                >
-                  👁️ Lihat IAP
-                </Button>
-              </div>
-            ))}
-          </div>
+                  
+                  <CardContent className="p-6">
+                    <p className="text-muted-foreground mb-4 line-clamp-3">
+                      {category.description}
+                    </p>
+                    
+                    <Button 
+                      className="w-full btn-primary"
+                      onClick={() => handleViewItems(category.id, category.name)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Lihat IAP
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

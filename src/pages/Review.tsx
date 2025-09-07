@@ -241,26 +241,26 @@ const Review = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="animate-fade-in-up">
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent animate-pulse-gentle">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent animate-pulse-gentle">
               Review & Rating
             </h1>
-            <p className="text-lg text-muted-foreground mb-8 animate-fade-in-up animation-delay-200">
+            <p className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 animate-fade-in-up animation-delay-200 px-4">
               Share your opinions and see what others think!
             </p>
           </div>
 
           {/* Rating Summary */}
           {reviews.length > 0 && (
-            <div className="bg-card border border-border rounded-xl p-6 mb-8 max-w-2xl mx-auto animate-fade-in-up animation-delay-300 hover:shadow-lg transition-all duration-300">
-              <div className="flex items-center justify-center gap-4 mb-6">
+            <div className="bg-card border border-border rounded-xl p-4 sm:p-6 mb-6 sm:mb-8 max-w-2xl mx-auto animate-fade-in-up animation-delay-300 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center justify-center gap-4 mb-4 sm:mb-6">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-gold mb-2 animate-pulse-gentle">
+                  <div className="text-2xl sm:text-4xl font-bold text-gold mb-2 animate-pulse-gentle">
                     {ratingStats.average.toFixed(1)}
                   </div>
                   <div className="flex justify-center mb-2 animate-fade-in-up animation-delay-400">
                     {renderStars(Math.round(ratingStats.average))}
                   </div>
-                  <p className="text-sm text-muted-foreground animate-fade-in-up animation-delay-500">
+                  <p className="text-xs sm:text-sm text-muted-foreground animate-fade-in-up animation-delay-500">
                     {ratingStats.total} total reviews
                   </p>
                 </div>
@@ -268,27 +268,27 @@ const Review = () => {
               
               {/* Rating Filter Buttons */}
               <div className="space-y-2">
-                <div className="flex justify-center gap-2 mb-4">
+                <div className="flex justify-center gap-2 mb-3 sm:mb-4">
                   <Button
                     variant={selectedRatingFilter === null ? "default" : "outline"}
                     size="sm"
                     onClick={() => filterByRating(null)}
-                    className="text-xs"
+                    className="text-xs sm:text-sm"
                   >
                     All ({ratingStats.total})
                   </Button>
                 </div>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1 sm:gap-2">
                   {[5, 4, 3, 2, 1].map((rating, index) => (
                     <Button
                       key={rating}
                       variant={selectedRatingFilter === rating ? "default" : "outline"}
                       size="sm"
                       onClick={() => filterByRating(rating)}
-                      className={`flex flex-col items-center p-3 h-auto transition-all duration-300 hover:scale-105 animate-fade-in-up animation-delay-${(index + 1) * 100}`}
+                      className={`flex flex-col items-center p-2 sm:p-3 h-auto transition-all duration-300 hover:scale-105 animate-fade-in-up animation-delay-${(index + 1) * 100}`}
                     >
                       <div className="flex items-center gap-1 mb-1">
-                        <Star className="h-3 w-3 fill-gold text-gold" />
+                        <Star className="h-2 w-2 sm:h-3 sm:w-3 fill-gold text-gold" />
                         <span className="text-xs font-medium">{rating}</span>
                       </div>
                       <span className="text-xs text-muted-foreground">
@@ -454,12 +454,12 @@ const Review = () => {
           ) : (
             <div>
               {/* Pagination Controls Top */}
-              <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row justify-between items-center mb-4 sm:mb-6 gap-3 sm:gap-4">
+                <div className="flex items-center gap-2 sm:gap-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Show:</span>
+                    <span className="text-xs sm:text-sm text-muted-foreground">Show:</span>
                     <Select value={reviewsPerPage.toString()} onValueChange={handleReviewsPerPageChange}>
-                      <SelectTrigger className="w-20">
+                      <SelectTrigger className="w-16 sm:w-20 text-xs sm:text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -469,17 +469,17 @@ const Review = () => {
                         <SelectItem value="20">20</SelectItem>
                       </SelectContent>
                     </Select>
-                    <span className="text-sm text-muted-foreground">per page</span>
+                    <span className="text-xs sm:text-sm text-muted-foreground">per page</span>
                   </div>
                 </div>
                 
                 <div className="text-center">
                   {selectedRatingFilter ? (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Showing {startIndex + 1}-{Math.min(endIndex, filteredReviews.length)} of {filteredReviews.length} reviews with {selectedRatingFilter} star{selectedRatingFilter !== 1 ? 's' : ''}
                     </p>
                   ) : (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Showing {startIndex + 1}-{Math.min(endIndex, filteredReviews.length)} of {filteredReviews.length} reviews
                     </p>
                   )}
@@ -487,28 +487,28 @@ const Review = () => {
               </div>
               
               {currentReviews.map((review, index) => (
-              <Card key={review.id} className={`game-card p-6 animate-slide-in-left hover:scale-[1.02] transition-all duration-300 animation-delay-${Math.min(index * 100, 500)}`}>
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="font-semibold text-lg">{review.name}</h3>
-                    <p className="text-sm text-muted-foreground">{review.email}</p>
+              <Card key={review.id} className={`game-card p-4 sm:p-6 animate-slide-in-left hover:scale-[1.02] transition-all duration-300 animation-delay-${Math.min(index * 100, 500)}`}>
+                <div className="flex flex-col sm:flex-row items-start justify-between mb-3 sm:mb-4 gap-3 sm:gap-0">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-base sm:text-lg truncate">{review.name}</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{review.email}</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-shrink-0">
                     <div className="flex">{renderStars(review.rating)}</div>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
                       {new Date(review.created_at).toLocaleDateString('id-ID')}
                     </span>
                   </div>
                 </div>
                 
-                <p className="text-muted-foreground mb-4">{review.description}</p>
+                <p className="text-sm sm:text-base text-muted-foreground mb-3 sm:mb-4 leading-relaxed">{review.description}</p>
                 
                 {review.image_url && (
-                  <div className="mt-4">
+                  <div className="mt-3 sm:mt-4">
                     <img
                       src={review.image_url}
                       alt="Review image"
-                      className="max-w-xs h-32 object-cover rounded-lg"
+                      className="w-full max-w-xs h-24 sm:h-32 object-cover rounded-lg"
                     />
                   </div>
                 )}
@@ -518,26 +518,26 @@ const Review = () => {
             
             {/* Pagination Controls Bottom */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-4 mt-8">
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 mt-6 sm:mt-8">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={goToPrevPage}
                   disabled={currentPage === 1}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 text-xs sm:text-sm"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
                   Previous
                 </Button>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                     <Button
                       key={page}
                       variant={currentPage === page ? "default" : "outline"}
                       size="sm"
                       onClick={() => setCurrentPage(page)}
-                      className="w-10 h-10"
+                      className="w-8 h-8 sm:w-10 sm:h-10 text-xs sm:text-sm"
                     >
                       {page}
                     </Button>
@@ -549,10 +549,10 @@ const Review = () => {
                   size="sm"
                   onClick={goToNextPage}
                   disabled={currentPage === totalPages}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 text-xs sm:text-sm"
                 >
                   Next
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             )}

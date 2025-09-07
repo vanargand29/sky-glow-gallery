@@ -15,6 +15,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, ShoppingCart, Search, X } from 'lucide-react';
+import { useCart } from '@/contexts/CartContext';
 
 type ItemStatus = 'Tersedia' | 'Best Seller' | 'Close' | 'Diskon' | 'New';
 
@@ -34,6 +35,7 @@ const CategoryItems = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { addToCart } = useCart();
   
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +58,22 @@ const CategoryItems = () => {
   const closeModal = () => {
     setSelectedImage(null);
     setIsModalOpen(false);
+  };
+
+  const handleAddToCart = (item: Item) => {
+    addToCart({
+      id: item.id.toString(),
+      name: item.name,
+      price: item.price,
+      image_url: item.image_url,
+      type: 'item',
+      category: categoryName
+    });
+    
+    toast({
+      title: "Berhasil!",
+      description: `${item.name} ditambahkan ke keranjang`,
+    });
   };
   const [sortBy, setSortBy] = useState<string>('status');
   const categoryName = location.state?.categoryName || 'Kategori';
@@ -184,31 +202,31 @@ const CategoryItems = () => {
           </Button>
           
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
               {categoryName}
             </h1>
-            <p className="text-lg text-muted-foreground mb-6">
+            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mb-4 sm:mb-6">
               Item premium tersedia untuk kategori ini
             </p>
             
             
             {/* Search and Sort */}
-            <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-6">
-              <div className="w-full md:w-96">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-4 sm:mb-6">
+              <div className="w-full sm:w-80 md:w-96">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
-                    placeholder="Cari item... (contoh: Cape atau Sunlight)"
+                    placeholder="Cari item..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 w-full"
+                    className="pl-10 w-full text-sm sm:text-base"
                   />
                 </div>
               </div>
               
-              <div className="w-full md:w-48">
+              <div className="w-full sm:w-40 md:w-48">
                 <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full text-sm sm:text-base">
                     <SelectValue placeholder="Urutkan" />
                   </SelectTrigger>
                   <SelectContent>
@@ -223,7 +241,7 @@ const CategoryItems = () => {
             </div>
             
             {searchQuery && (
-              <p className="text-sm text-muted-foreground mt-2 text-center">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2 text-center">
                 Hasil pencarian "{searchQuery}": {filteredAndSortedItems.length} item ditemukan
               </p>
             )}
@@ -232,22 +250,22 @@ const CategoryItems = () => {
 
         {/* Items Grid */}
         {items.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground text-lg">Belum ada item tersedia untuk kategori ini.</p>
+          <div className="text-center py-8 sm:py-12">
+            <p className="text-muted-foreground text-base sm:text-lg">Belum ada item tersedia untuk kategori ini.</p>
           </div>
         ) : filteredAndSortedItems.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold mb-2">Tidak ada item yang ditemukan</h3>
-            <p className="text-muted-foreground">
+          <div className="text-center py-8 sm:py-12">
+            <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">🔍</div>
+            <h3 className="text-lg sm:text-xl font-semibold mb-2">Tidak ada item yang ditemukan</h3>
+            <p className="text-sm sm:text-base text-muted-foreground px-4">
               Coba kata kunci lain atau periksa ejaan "{searchQuery}"
             </p>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {filteredAndSortedItems.map((item) => (
               <Card key={item.id} className="game-card group overflow-hidden hover:shadow-lg transition-all duration-300">
-                <div className="relative h-48 overflow-hidden">
+                <div className="relative h-40 sm:h-48 overflow-hidden">
                   {item.image_url ? (
                     <img
                       src={item.image_url}
@@ -261,13 +279,13 @@ const CategoryItems = () => {
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center">
-                      <div className="text-6xl opacity-50">🎵</div>
+                      <div className="text-4xl sm:text-6xl opacity-50">🎵</div>
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
-                  <div className="absolute top-4 right-4">
+                  <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
                     <div 
-                      className="px-3 py-1 rounded-full text-xs font-medium"
+                      className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium"
                       style={getStatusBadgeStyle(item.status)}
                     >
                       {item.status || 'Tersedia'}
@@ -275,19 +293,19 @@ const CategoryItems = () => {
                   </div>
                 </div>
                 
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-bold mb-3">{item.name}</h3>
-                  <p className="text-muted-foreground mb-4 line-clamp-3">
+                <CardContent className="p-4 sm:p-6">
+                  <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3 line-clamp-2">{item.name}</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground mb-3 sm:mb-4 line-clamp-2 sm:line-clamp-3">
                     {item.description}
                   </p>
                   
-                  <div className="flex items-center justify-between">
-                    <div className="text-lg font-semibold text-accent">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                    <div className="text-base sm:text-lg font-semibold text-accent">
                       {formatPrice(item.price)}
                     </div>
                     <Button 
-                      className="btn-primary"
-                      onClick={() => window.open(`https://wa.me/6289504041209?text=Halo, saya tertarik dengan ${item.name} seharga ${formatPrice(item.price)}`, '_blank')}
+                      className="btn-primary w-full sm:w-auto text-sm sm:text-base"
+                      onClick={() => handleAddToCart(item)}
                     >
                       <ShoppingCart className="h-4 w-4 mr-2" />
                       Beli Sekarang

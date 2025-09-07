@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Star, Menu, X } from "lucide-react";
+import { Star, Menu, X, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/contexts/CartContext";
+import CartModal from "./CartModal";
 
 const Header = () => {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const { getTotalItems } = useCart();
 
   const navItems = [
     { name: "Home", path: "/" },
@@ -49,22 +53,53 @@ const Header = () => {
               ))}
             </nav>
             
+            {/* Desktop Cart Icon */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsCartOpen(true)}
+              className="relative hidden md:flex"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {getTotalItems() > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                  {getTotalItems()}
+                </span>
+              )}
+            </Button>
           </div>
 
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="md:hidden"
-            onClick={toggleMobileMenu}
-            aria-label="Toggle mobile menu"
-          >
-            {isMobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </Button>
+          {/* Mobile Cart and Menu Buttons */}
+          <div className="flex items-center space-x-2 md:hidden">
+            {/* Mobile Cart Icon */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsCartOpen(true)}
+              className="relative"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {getTotalItems() > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium text-[10px]">
+                  {getTotalItems()}
+                </span>
+              )}
+            </Button>
+            
+            {/* Mobile Menu Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleMobileMenu}
+              aria-label="Toggle mobile menu"
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}
@@ -85,10 +120,14 @@ const Header = () => {
                   {item.name}
                 </Link>
               ))}
+              
             </div>
           </nav>
         )}
       </div>
+      
+      {/* Cart Modal */}
+      <CartModal isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
     </header>
   );
 };

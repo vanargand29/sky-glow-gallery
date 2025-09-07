@@ -80,14 +80,14 @@ const Sky = () => {
               </Badge>
             </div>
             
-            <h1 className="text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
               SKY: CHILDREN OF THE LIGHT ⚡
             </h1>
             
-            <p className="text-xl text-muted-foreground mb-4">
+            <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mb-3 sm:mb-4 px-4">
               Pilih kategori untuk melihat item premium yang tersedia
             </p>
-            <p className="text-lg text-muted-foreground mb-8">
+            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mb-6 sm:mb-8 px-4">
               Klik "Lihat IAP" untuk melihat item dan harganya.
             </p>
           </div>
@@ -95,27 +95,27 @@ const Sky = () => {
       </section>
 
       {/* Categories Section */}
-      <section className="py-16">
+      <section className="py-12 sm:py-16">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-4">Kategori Item Premium</h2>
-          <p className="text-center text-muted-foreground mb-12">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-3 sm:mb-4">Kategori Item Premium</h2>
+          <p className="text-sm sm:text-base text-center text-muted-foreground mb-8 sm:mb-12 px-4">
             Pilih kategori untuk melihat koleksi item eksklusif
           </p>
 
           {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-accent mx-auto"></div>
-              <p className="mt-4 text-muted-foreground">Loading categories...</p>
+            <div className="text-center py-8 sm:py-12">
+              <div className="animate-spin rounded-full h-24 w-24 sm:h-32 sm:w-32 border-b-2 border-accent mx-auto"></div>
+              <p className="mt-3 sm:mt-4 text-sm sm:text-base text-muted-foreground">Loading categories...</p>
             </div>
           ) : categories.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg">Belum ada kategori tersedia.</p>
+            <div className="text-center py-8 sm:py-12">
+              <p className="text-muted-foreground text-base sm:text-lg">Belum ada kategori tersedia.</p>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {categories.map((category) => (
                 <Card key={category.id} className="game-card group cursor-pointer overflow-hidden hover:shadow-lg transition-all duration-300">
-                  <div className="relative h-48 overflow-hidden">
+                  <div className="relative h-40 sm:h-48 overflow-hidden">
                     {category.image_url ? (
                       <img
                         src={category.image_url}
@@ -132,22 +132,22 @@ const Sky = () => {
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center">
-                        <div className="text-6xl opacity-50">🎮</div>
+                        <div className="text-4xl sm:text-6xl opacity-50">🎮</div>
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <h3 className="text-xl font-bold text-white mb-2">{category.name}</h3>
+                    <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4">
+                      <h3 className="text-lg sm:text-xl font-bold text-white mb-2 line-clamp-2">{category.name}</h3>
                     </div>
                   </div>
                   
-                  <CardContent className="p-6">
-                    <p className="text-muted-foreground mb-4 line-clamp-3">
+                  <CardContent className="p-4 sm:p-6">
+                    <p className="text-sm sm:text-base text-muted-foreground mb-3 sm:mb-4 line-clamp-2 sm:line-clamp-3">
                       {category.description}
                     </p>
                     
                     <Button 
-                      className="w-full btn-primary"
+                      className="w-full btn-primary text-sm sm:text-base"
                       onClick={() => handleViewItems(category.id, category.name)}
                     >
                       <Eye className="h-4 w-4 mr-2" />

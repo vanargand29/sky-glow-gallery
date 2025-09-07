@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +39,25 @@ const CategoryItems = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Debug function to test popup
+  const testPopup = () => {
+    alert('Button clicked!');
+    setSelectedImage('https://via.placeholder.com/800x600/FF0000/FFFFFF?text=Test+Image');
+    setIsModalOpen(true);
+  };
+
+  const openImageModal = (imageUrl: string, itemName: string) => {
+    alert(`Opening image for: ${itemName}`);
+    setSelectedImage(imageUrl);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setSelectedImage(null);
+    setIsModalOpen(false);
+  };
   const [sortBy, setSortBy] = useState<string>('status');
   const categoryName = location.state?.categoryName || 'Kategori';
 
@@ -172,6 +192,7 @@ const CategoryItems = () => {
               Item premium tersedia untuk kategori ini
             </p>
             
+            
             {/* Search and Sort */}
             <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-6">
               <div className="w-full md:w-96">
@@ -233,18 +254,18 @@ const CategoryItems = () => {
                       src={item.image_url}
                       alt={item.name}
                       className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300 cursor-pointer"
-                      onClick={() => setSelectedImage(item.image_url!)}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = '/placeholder.svg';
                       }}
+                      onMouseDown={() => openImageModal(item.image_url!, item.name)}
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center">
                       <div className="text-6xl opacity-50">🎵</div>
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
                   <div className="absolute top-4 right-4">
                     <div 
                       className="px-3 py-1 rounded-full text-xs font-medium"
@@ -279,29 +300,64 @@ const CategoryItems = () => {
           </div>
         )}
         
-        {/* Image Popup Modal */}
-        {selectedImage && (
+        {/* Image Popup Modal using Portal */}
+        {isModalOpen && selectedImage && createPortal(
           <div 
-            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-            onClick={() => setSelectedImage(null)}
+            style={{ 
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 999999,
+              padding: '20px'
+            }}
+            onMouseDown={closeModal}
           >
-            <div className="relative max-w-4xl max-h-full">
-              <Button
-                variant="outline"
-                size="icon"
-                className="absolute -top-12 right-0 bg-white/10 border-white/20 text-white hover:bg-white/20"
-                onClick={() => setSelectedImage(null)}
+            <div style={{ position: 'relative' }}>
+              <button
+                style={{
+                  position: 'absolute',
+                  top: '-40px',
+                  right: '0',
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '40px',
+                  height: '40px',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  closeModal();
+                }}
               >
-                <X className="h-4 w-4" />
-              </Button>
+                ×
+              </button>
               <img
                 src={selectedImage}
                 alt="Preview"
-                className="max-w-full max-h-full object-contain rounded-lg"
-                onClick={(e) => e.stopPropagation()}
+                style={{
+                  maxWidth: '90vw',
+                  maxHeight: '90vh',
+                  objectFit: 'contain',
+                  borderRadius: '8px',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
               />
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>

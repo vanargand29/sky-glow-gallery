@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
@@ -66,6 +67,7 @@ const App = () => (
             </Routes>
             <Footer />
           </div>
+          <SpeedInsights />
         </BrowserRouter>
       </TooltipProvider>
     </CartProvider>

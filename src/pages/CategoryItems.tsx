@@ -49,7 +49,6 @@ const CategoryItems = () => {
   };
 
   const openImageModal = (imageUrl: string, itemName: string) => {
-    alert(`Opening image for: ${itemName}`);
     setSelectedImage(imageUrl);
     setIsModalOpen(true);
   };

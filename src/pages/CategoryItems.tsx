@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, ShoppingCart, Search, X } from 'lucide-react';
 
+type ItemStatus = 'Tersedia' | 'Best Seller' | 'Close' | 'Diskon' | 'New';
+
 interface Item {
   id: number;
   name: string;
@@ -22,6 +24,7 @@ interface Item {
   price: number;
   category_id: number;
   image_url?: string;
+  status?: ItemStatus;
   created_at: string;
 }
 
@@ -35,7 +38,7 @@ const CategoryItems = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<string>('newest');
+  const [sortBy, setSortBy] = useState<string>('status');
   const categoryName = location.state?.categoryName || 'Kategori';
 
   // Sort and filter items
@@ -56,7 +59,26 @@ const CategoryItems = () => {
         case 'price_asc':
           return a.price - b.price;
         case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'status':
         default:
+          // Custom status priority: New, Best Seller, Diskon, Tersedia, Close
+          const statusPriority = {
+            'New': 1,
+            'Best Seller': 2,
+            'Diskon': 3,
+            'Tersedia': 4,
+            'Close': 5
+          };
+          const aStatus = a.status || 'Tersedia';
+          const bStatus = b.status || 'Tersedia';
+          const aPriority = statusPriority[aStatus] || 6;
+          const bPriority = statusPriority[bStatus] || 6;
+          
+          if (aPriority !== bPriority) {
+            return aPriority - bPriority;
+          }
+          // If same status, sort by newest
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
@@ -86,6 +108,23 @@ const CategoryItems = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getStatusBadgeStyle = (status: ItemStatus = 'Tersedia') => {
+    switch (status) {
+      case 'New':
+        return { backgroundColor: '#3b82f6', color: '#ffffff' }; // blue-500
+      case 'Tersedia':
+        return { backgroundColor: '#22c55e', color: '#ffffff' }; // green-500
+      case 'Close':
+        return { backgroundColor: '#ef4444', color: '#ffffff' }; // red-500
+      case 'Diskon':
+        return { backgroundColor: '#f97316', color: '#ffffff' }; // orange-500
+      case 'Best Seller':
+        return { backgroundColor: '#eab308', color: '#000000' }; // yellow-500
+      default:
+        return { backgroundColor: '#6b7280', color: '#ffffff' }; // gray-500
     }
   };
 
@@ -153,6 +192,7 @@ const CategoryItems = () => {
                     <SelectValue placeholder="Urutkan" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="status">Status (Default)</SelectItem>
                     <SelectItem value="newest">Terbaru</SelectItem>
                     <SelectItem value="name_asc">Nama (A-Z)</SelectItem>
                     <SelectItem value="price_desc">Harga Tertinggi</SelectItem>
@@ -206,9 +246,12 @@ const CategoryItems = () => {
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                   <div className="absolute top-4 right-4">
-                    <Badge className="bg-accent/90 text-accent-foreground">
-                      {formatPrice(item.price)}
-                    </Badge>
+                    <div 
+                      className="px-3 py-1 rounded-full text-xs font-medium"
+                      style={getStatusBadgeStyle(item.status)}
+                    >
+                      {item.status || 'Tersedia'}
+                    </div>
                   </div>
                 </div>
                 

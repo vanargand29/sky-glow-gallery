@@ -5,9 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Star, Upload, X } from "lucide-react";
+import { Star, Upload, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Review {
   id: string;
@@ -33,7 +34,13 @@ const Review = () => {
   });
 
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [filteredReviews, setFilteredReviews] = useState<Review[]>([]);
+  const [selectedRatingFilter, setSelectedRatingFilter] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [reviewsPerPage, setReviewsPerPage] = useState(5);
 
   // Fetch reviews from Supabase
   useEffect(() => {
@@ -55,6 +62,7 @@ const Review = () => {
       }));
 
       setReviews(formattedReviews);
+      setFilteredReviews(formattedReviews);
     } catch (error) {
       console.error('Error fetching reviews:', error);
       toast({
@@ -130,7 +138,9 @@ const Review = () => {
         ...data,
         email: censorEmail(data.email)
       };
-      setReviews([newReview, ...reviews]);
+      const updatedReviews = [newReview, ...reviews];
+      setReviews(updatedReviews);
+      setFilteredReviews(selectedRatingFilter ? updatedReviews.filter(r => r.rating === selectedRatingFilter) : updatedReviews);
       
       // Reset form
       setFormData({ name: "", email: "", description: "" });
@@ -169,21 +179,131 @@ const Review = () => {
     ));
   };
 
+  // Calculate rating statistics
+  const getRatingStats = () => {
+    if (reviews.length === 0) return { average: 0, counts: [0, 0, 0, 0, 0], total: 0 };
+    
+    const counts = [0, 0, 0, 0, 0];
+    let totalRating = 0;
+    
+    reviews.forEach(review => {
+      counts[review.rating - 1]++;
+      totalRating += review.rating;
+    });
+    
+    return {
+      average: totalRating / reviews.length,
+      counts,
+      total: reviews.length
+    };
+  };
+
+  // Filter reviews by rating
+  const filterByRating = (rating: number | null) => {
+    setSelectedRatingFilter(rating);
+    setCurrentPage(1); // Reset to first page when filtering
+    if (rating === null) {
+      setFilteredReviews(reviews);
+    } else {
+      setFilteredReviews(reviews.filter(review => review.rating === rating));
+    }
+  };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredReviews.length / reviewsPerPage);
+  const startIndex = (currentPage - 1) * reviewsPerPage;
+  const endIndex = startIndex + reviewsPerPage;
+  const currentReviews = filteredReviews.slice(startIndex, endIndex);
+
+  // Pagination handlers
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleReviewsPerPageChange = (value: string) => {
+    setReviewsPerPage(parseInt(value));
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
+
+  const ratingStats = getRatingStats();
+
   return (
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
-            Review & Rating
-          </h1>
-          <p className="text-lg text-muted-foreground mb-8">
-            Share your opinions and see what others think!
-          </p>
+          <div className="animate-fade-in-up">
+            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent animate-pulse-gentle">
+              Review & Rating
+            </h1>
+            <p className="text-lg text-muted-foreground mb-8 animate-fade-in-up animation-delay-200">
+              Share your opinions and see what others think!
+            </p>
+          </div>
+
+          {/* Rating Summary */}
+          {reviews.length > 0 && (
+            <div className="bg-card border border-border rounded-xl p-6 mb-8 max-w-2xl mx-auto animate-fade-in-up animation-delay-300 hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-gold mb-2 animate-pulse-gentle">
+                    {ratingStats.average.toFixed(1)}
+                  </div>
+                  <div className="flex justify-center mb-2 animate-fade-in-up animation-delay-400">
+                    {renderStars(Math.round(ratingStats.average))}
+                  </div>
+                  <p className="text-sm text-muted-foreground animate-fade-in-up animation-delay-500">
+                    {ratingStats.total} total reviews
+                  </p>
+                </div>
+              </div>
+              
+              {/* Rating Filter Buttons */}
+              <div className="space-y-2">
+                <div className="flex justify-center gap-2 mb-4">
+                  <Button
+                    variant={selectedRatingFilter === null ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => filterByRating(null)}
+                    className="text-xs"
+                  >
+                    All ({ratingStats.total})
+                  </Button>
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {[5, 4, 3, 2, 1].map((rating, index) => (
+                    <Button
+                      key={rating}
+                      variant={selectedRatingFilter === rating ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => filterByRating(rating)}
+                      className={`flex flex-col items-center p-3 h-auto transition-all duration-300 hover:scale-105 animate-fade-in-up animation-delay-${(index + 1) * 100}`}
+                    >
+                      <div className="flex items-center gap-1 mb-1">
+                        <Star className="h-3 w-3 fill-gold text-gold" />
+                        <span className="text-xs font-medium">{rating}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        ({ratingStats.counts[rating - 1]})
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="btn-primary">
+              <Button className="btn-primary animate-fade-in-up animation-delay-600 hover:scale-105 transition-transform duration-300">
                 Add Review
               </Button>
             </DialogTrigger>
@@ -313,13 +433,61 @@ const Review = () => {
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">Loading reviews...</p>
             </div>
-          ) : reviews.length === 0 ? (
+          ) : filteredReviews.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg">No reviews yet.</p>
+              {selectedRatingFilter ? (
+                <div>
+                  <p className="text-muted-foreground text-lg mb-4">
+                    No reviews with {selectedRatingFilter} star{selectedRatingFilter !== 1 ? 's' : ''} yet.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => filterByRating(null)}
+                  >
+                    Show All Reviews
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-lg">No reviews yet.</p>
+              )}
             </div>
           ) : (
-            reviews.map((review) => (
-              <Card key={review.id} className="game-card p-6">
+            <div>
+              {/* Pagination Controls Top */}
+              <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Show:</span>
+                    <Select value={reviewsPerPage.toString()} onValueChange={handleReviewsPerPageChange}>
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="15">15</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className="text-sm text-muted-foreground">per page</span>
+                  </div>
+                </div>
+                
+                <div className="text-center">
+                  {selectedRatingFilter ? (
+                    <p className="text-sm text-muted-foreground">
+                      Showing {startIndex + 1}-{Math.min(endIndex, filteredReviews.length)} of {filteredReviews.length} reviews with {selectedRatingFilter} star{selectedRatingFilter !== 1 ? 's' : ''}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Showing {startIndex + 1}-{Math.min(endIndex, filteredReviews.length)} of {filteredReviews.length} reviews
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {currentReviews.map((review, index) => (
+              <Card key={review.id} className={`game-card p-6 animate-slide-in-left hover:scale-[1.02] transition-all duration-300 animation-delay-${Math.min(index * 100, 500)}`}>
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h3 className="font-semibold text-lg">{review.name}</h3>
@@ -345,7 +513,50 @@ const Review = () => {
                   </div>
                 )}
               </Card>
-            ))
+              ))
+            }
+            
+            {/* Pagination Controls Bottom */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 mt-8">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPrevPage}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="w-10 h-10"
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-2"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            </div>
           )}
         </div>
       </div>

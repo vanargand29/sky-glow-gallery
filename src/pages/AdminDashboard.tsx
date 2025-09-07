@@ -19,6 +19,8 @@ interface Category {
   created_at: string;
 }
 
+type ItemStatus = 'Tersedia' | 'Best Seller' | 'Close' | 'Diskon' | 'New';
+
 interface Item {
   id: string;
   name: string;
@@ -26,6 +28,7 @@ interface Item {
   price: number;
   category_id: string;
   image_url?: string;
+  status?: ItemStatus;
   created_at: string;
   categories?: { name: string };
 }
@@ -63,6 +66,23 @@ const AdminDashboard = () => {
   const { logout } = useAuth();
   const { toast } = useToast();
   
+  const getStatusBadgeStyle = (status: ItemStatus = 'Tersedia') => {
+    switch (status) {
+      case 'New':
+        return { backgroundColor: '#3b82f6', color: '#ffffff' }; // blue-500
+      case 'Tersedia':
+        return { backgroundColor: '#22c55e', color: '#ffffff' }; // green-500
+      case 'Close':
+        return { backgroundColor: '#ef4444', color: '#ffffff' }; // red-500
+      case 'Diskon':
+        return { backgroundColor: '#f97316', color: '#ffffff' }; // orange-500
+      case 'Best Seller':
+        return { backgroundColor: '#eab308', color: '#000000' }; // yellow-500
+      default:
+        return { backgroundColor: '#6b7280', color: '#ffffff' }; // gray-500
+    }
+  };
+  
   // State management
   const [activeTab, setActiveTab] = useState('categories');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -92,7 +112,8 @@ const AdminDashboard = () => {
     description: '',
     price: '',
     category_id: '',
-    image_url: ''
+    image_url: '',
+    status: 'Tersedia' as ItemStatus
   });
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
   const [itemImagePreview, setItemImagePreview] = useState<string>('');
@@ -325,16 +346,23 @@ const AdminDashboard = () => {
       }
       
       if (itemForm.id) {
-        // Update item
+        // Update item - only update image_url if a new image was uploaded
+        const updateData: any = {
+          name: itemForm.name,
+          description: itemForm.description,
+          price: parseFloat(itemForm.price),
+          category_id: itemForm.category_id,
+          status: itemForm.status
+        };
+        
+        // Only update image_url if a new image was uploaded
+        if (itemImageFile) {
+          updateData.image_url = imageUrl;
+        }
+        
         const { error } = await supabase
           .from('items')
-          .update({
-            name: itemForm.name,
-            description: itemForm.description,
-            price: parseFloat(itemForm.price),
-            category_id: itemForm.category_id,
-            image_url: imageUrl || null
-          })
+          .update(updateData)
           .eq('id', itemForm.id);
 
         if (error) throw error;
@@ -352,8 +380,9 @@ const AdminDashboard = () => {
             description: itemForm.description,
             price: parseFloat(itemForm.price),
             category_id: itemForm.category_id,
-            image_url: imageUrl || null
-          }]);
+            image_url: imageUrl || null,
+            status: itemForm.status
+          } as any]);
 
         if (error) throw error;
         
@@ -363,7 +392,7 @@ const AdminDashboard = () => {
         });
       }
 
-      setItemForm({ id: '', name: '', description: '', price: '', category_id: '', image_url: '' });
+      setItemForm({ id: '', name: '', description: '', price: '', category_id: '', image_url: '', status: 'Tersedia' as ItemStatus });
       clearItemImage();
       setItemDialogOpen(false);
       fetchItems();
@@ -457,7 +486,8 @@ const AdminDashboard = () => {
       description: item.description,
       price: item.price.toString(),
       category_id: item.category_id,
-      image_url: item.image_url || ''
+      image_url: item.image_url || '',
+      status: item.status || 'Tersedia' as ItemStatus
     });
     clearItemImage();
     if (item.image_url) {
@@ -1109,7 +1139,7 @@ const AdminDashboard = () => {
               <h2 className="text-2xl font-semibold">Manajemen Items</h2>
               <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => setItemForm({ id: '', name: '', description: '', price: '', category_id: '', image_url: '' })}>
+                  <Button onClick={() => setItemForm({ id: '', name: '', description: '', price: '', category_id: '', image_url: '', status: 'Tersedia' as ItemStatus })}>
                     <Plus className="h-4 w-4 mr-2" />
                     Tambah Item
                   </Button>
@@ -1164,6 +1194,24 @@ const AdminDashboard = () => {
                               {category.name}
                             </SelectItem>
                           ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="item-status">Status</Label>
+                      <Select 
+                        value={itemForm.status} 
+                        onValueChange={(value) => setItemForm(prev => ({ ...prev, status: value as ItemStatus }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Tersedia">Tersedia</SelectItem>
+                          <SelectItem value="New">New</SelectItem>
+                          <SelectItem value="Best Seller">Best Seller</SelectItem>
+                          <SelectItem value="Close">Close</SelectItem>
+                          <SelectItem value="Diskon">Diskon</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1283,9 +1331,15 @@ const AdminDashboard = () => {
                       <div className="flex-1">
                         <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
                         <p className="text-muted-foreground mb-2">{item.description}</p>
-                        <div className="flex gap-4 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                           <span>Harga: Rp {item.price.toLocaleString('id-ID')}</span>
                           <span>Kategori: {item.categories?.name}</span>
+                          <span 
+                            className="px-2 py-1 rounded-full text-xs font-medium"
+                            style={getStatusBadgeStyle(item.status)}
+                          >
+                            {item.status || 'Tersedia'}
+                          </span>
                         </div>
                         {item.image_url && (
                           <p className="text-sm text-muted-foreground mt-1">Image: {item.image_url}</p>

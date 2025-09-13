@@ -176,6 +176,7 @@ const AdminDashboard = () => {
     valid_from: '',
     valid_until: '',
     is_active: true,
+    minimum_purchase_amount: '',
     applicable_games: [] as string[],
     applicable_categories: [] as string[]
   });
@@ -1062,7 +1063,8 @@ const AdminDashboard = () => {
         usage_limit: voucherForm.usage_limit ? parseInt(voucherForm.usage_limit) : null,
         valid_from: voucherForm.valid_from || null,
         valid_until: voucherForm.valid_until || null,
-        is_active: voucherForm.is_active
+        is_active: voucherForm.is_active,
+        minimum_purchase_amount: voucherForm.minimum_purchase_amount ? parseInt(voucherForm.minimum_purchase_amount) : 0
       };
 
       console.log('Voucher data to save:', voucherData);
@@ -1120,6 +1122,7 @@ const AdminDashboard = () => {
         valid_from: '',
         valid_until: '',
         is_active: true,
+        minimum_purchase_amount: '',
         applicable_categories: [],
         applicable_games: []
       });
@@ -1190,6 +1193,7 @@ const AdminDashboard = () => {
       valid_from: voucher.valid_from ? voucher.valid_from.split('T')[0] : '',
       valid_until: voucher.valid_until ? voucher.valid_until.split('T')[0] : '',
       is_active: voucher.is_active,
+      minimum_purchase_amount: voucher.minimum_purchase_amount?.toString() || '',
       applicable_games: applicableGames,
       applicable_categories: applicableCategories
     });
@@ -2047,6 +2051,7 @@ const AdminDashboard = () => {
                       valid_from: '',
                       valid_until: '',
                       is_active: true,
+                      minimum_purchase_amount: '',
                       applicable_games: [],
                       applicable_categories: []
                     });
@@ -2111,16 +2116,27 @@ const AdminDashboard = () => {
                           placeholder="Kosongkan untuk unlimited"
                         />
                       </div>
-                      <div className="flex items-center space-x-2 pt-6">
-                        <input
-                          type="checkbox"
-                          id="voucher-active"
-                          checked={voucherForm.is_active}
-                          onChange={(e) => setVoucherForm(prev => ({ ...prev, is_active: e.target.checked }))}
-                          className="rounded"
+                      <div>
+                        <Label htmlFor="voucher-minimum-purchase">Minimal Pembelian (Rp)</Label>
+                        <Input
+                          id="voucher-minimum-purchase"
+                          type="number"
+                          value={voucherForm.minimum_purchase_amount}
+                          onChange={(e) => setVoucherForm(prev => ({ ...prev, minimum_purchase_amount: e.target.value }))}
+                          placeholder="0 (tidak ada minimal)"
                         />
-                        <Label htmlFor="voucher-active">Aktif</Label>
                       </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="voucher-active"
+                        checked={voucherForm.is_active}
+                        onChange={(e) => setVoucherForm(prev => ({ ...prev, is_active: e.target.checked }))}
+                        className="rounded"
+                      />
+                      <Label htmlFor="voucher-active">Aktif</Label>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -2146,35 +2162,43 @@ const AdminDashboard = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      {/* Game Selection */}
+                      {/* Multiple Game Selection */}
                       <div>
-                        <Label htmlFor="game-select">🎮 Pilih Game (Opsional)</Label>
-                        <select
-                          id="game-select"
-                          value={voucherForm.applicable_games[0] || ''}
-                          onChange={(e) => {
-                            const gameId = e.target.value;
-                            console.log('Game dropdown changed:', gameId);
-                            console.log('Current form before update:', voucherForm);
-                            setVoucherForm(prev => {
-                              const newForm = {
-                                ...prev,
-                                applicable_games: gameId ? [gameId] : [],
-                                applicable_categories: gameId ? [] : prev.applicable_categories
-                              };
-                              console.log('New form after game selection:', newForm);
-                              return newForm;
-                            });
-                          }}
-                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="">-- Pilih Game --</option>
+                        <Label>🎮 Pilih Game (Opsional - Bisa Pilih Beberapa)</Label>
+                        <div className="max-h-32 overflow-y-auto border p-3 rounded-md">
                           {games?.map((game) => (
-                            <option key={game.id} value={game.id}>
-                              {game.name}
-                            </option>
+                            <div key={game.id} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id={`game-${game.id}`}
+                                checked={voucherForm.applicable_games.includes(game.id)}
+                                onChange={(e) => {
+                                  const isChecked = e.target.checked;
+                                  setVoucherForm(prev => {
+                                    if (isChecked) {
+                                      return {
+                                        ...prev,
+                                        applicable_games: [...prev.applicable_games, game.id],
+                                        applicable_categories: [] // Clear categories when game is selected
+                                      };
+                                    } else {
+                                      return {
+                                        ...prev,
+                                        applicable_games: prev.applicable_games.filter(id => id !== game.id)
+                                      };
+                                    }
+                                  });
+                                }}
+                              />
+                              <Label htmlFor={`game-${game.id}`} className="text-sm cursor-pointer">{game.name}</Label>
+                            </div>
                           ))}
-                        </select>
+                        </div>
+                        {voucherForm.applicable_games.length > 0 && (
+                          <div className="mt-2 text-xs text-blue-600">
+                            Dipilih: {voucherForm.applicable_games.length} game
+                          </div>
+                        )}
                       </div>
 
                       {/* Multiple Category Selection */}

@@ -72,6 +72,17 @@ export const validateVoucher = async (
       };
     }
 
+    // Check minimum purchase amount
+    const cartTotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+    const minimumPurchase = (voucher as any).minimum_purchase_amount || 0;
+    
+    if (minimumPurchase > 0 && cartTotal < minimumPurchase) {
+      return {
+        isValid: false,
+        message: `Minimal pembelian untuk voucher ini adalah Rp ${minimumPurchase.toLocaleString('id-ID')}`
+      };
+    }
+
     // Check if voucher applies to any items in cart
     const applicableGameIds = (voucher as any).voucher_applicable_games?.map((game: any) => game.game_id) || [];
     const applicableCategoryIds = (voucher as any).voucher_applicable_categories?.map((category: any) => category.category_id) || [];

@@ -2177,35 +2177,60 @@ const AdminDashboard = () => {
                         </select>
                       </div>
 
-                      {/* Category Selection */}
+                      {/* Multiple Category Selection */}
                       <div>
-                        <Label htmlFor="category-select">🌟 Pilih Kategori Sky (Opsional)</Label>
-                        <select
-                          id="category-select"
-                          value={voucherForm.applicable_categories[0] || ''}
-                          onChange={(e) => {
-                            const categoryId = e.target.value;
-                            console.log('Category dropdown changed:', categoryId);
-                            console.log('Current form before update:', voucherForm);
-                            setVoucherForm(prev => {
-                              const newForm = {
-                                ...prev,
-                                applicable_categories: categoryId ? [categoryId] : [],
-                                applicable_games: categoryId ? [] : prev.applicable_games
-                              };
-                              console.log('New form after category selection:', newForm);
-                              return newForm;
-                            });
-                          }}
-                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="">-- Pilih Kategori --</option>
+                        <Label>🌟 Pilih Kategori Sky (Opsional - Bisa Pilih Beberapa)</Label>
+                        <div className="mt-2 space-y-2 max-h-32 overflow-y-auto border border-gray-300 rounded-md p-3">
                           {categories?.map((category) => (
-                            <option key={category.id} value={category.id}>
-                              {category.name}
-                            </option>
+                            <div key={category.id} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id={`category-${category.id}`}
+                                checked={voucherForm.applicable_categories.includes(category.id)}
+                                onChange={(e) => {
+                                  const isChecked = e.target.checked;
+                                  console.log(`Category ${category.name} ${isChecked ? 'checked' : 'unchecked'}`);
+                                  
+                                  setVoucherForm(prev => {
+                                    let newCategories;
+                                    if (isChecked) {
+                                      // Add category if checked
+                                      newCategories = [...prev.applicable_categories, category.id];
+                                      // Clear games when categories are selected
+                                      return {
+                                        ...prev,
+                                        applicable_categories: newCategories,
+                                        applicable_games: []
+                                      };
+                                    } else {
+                                      // Remove category if unchecked
+                                      newCategories = prev.applicable_categories.filter(id => id !== category.id);
+                                      return {
+                                        ...prev,
+                                        applicable_categories: newCategories
+                                      };
+                                    }
+                                  });
+                                }}
+                                className="rounded"
+                              />
+                              <Label 
+                                htmlFor={`category-${category.id}`}
+                                className="text-sm cursor-pointer"
+                              >
+                                {category.name}
+                              </Label>
+                            </div>
                           ))}
-                        </select>
+                          {(!categories || categories.length === 0) && (
+                            <p className="text-sm text-gray-500">Belum ada kategori tersedia</p>
+                          )}
+                        </div>
+                        {voucherForm.applicable_categories.length > 0 && (
+                          <div className="mt-2 text-xs text-blue-600">
+                            Dipilih: {voucherForm.applicable_categories.length} kategori
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -2214,8 +2239,9 @@ const AdminDashboard = () => {
                       <p className="font-medium mb-1">ℹ️ Informasi:</p>
                       <ul className="text-xs space-y-1 list-disc list-inside">
                         <li>Pilih game atau kategori untuk membatasi voucher pada item tertentu</li>
+                        <li>Untuk kategori: bisa memilih beberapa kategori sekaligus</li>
                         <li>Jika tidak memilih apapun, voucher berlaku untuk semua item</li>
-                        <li>Hanya bisa memilih satu game ATAU satu kategori, tidak keduanya</li>
+                        <li>Hanya bisa memilih game ATAU kategori, tidak keduanya</li>
                       </ul>
                     </div>
 

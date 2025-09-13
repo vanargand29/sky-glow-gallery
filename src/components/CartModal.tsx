@@ -354,21 +354,21 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose }) => {
                 <div className="space-y-1">
                   <div className="flex justify-between items-center text-xs">
                     <span>Subtotal:</span>
-                    <span>{formatPrice(getDiscountedTotal().originalTotal)}</span>
+                    <span className="font-medium">{formatPrice(getDiscountedTotal().originalTotal)}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-muted-foreground">Diskon:</span>
                     <span className="font-semibold text-green-600 dark:text-green-400">-{formatPrice(getDiscountedTotal().discountAmount)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm font-bold border-t pt-1">
-                    <span className="text-foreground">Total:</span>
-                    <span className="text-base font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{formatPrice(getDiscountedTotal().finalTotal)}</span>
+                    <span className="text-foreground">Total Pembayaran:</span>
+                    <span className="text-base font-bold text-green-600 dark:text-green-400">{formatPrice(getDiscountedTotal().finalTotal)}</span>
                   </div>
                 </div>
               ) : (
-                <div className="flex justify-between items-center text-sm font-bold">
-                  <span className="text-foreground">Total:</span>
-                  <span className="text-base font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{formatPrice(getTotalPrice())}</span>
+                <div className="flex justify-between items-center text-sm font-bold border rounded-lg p-2 bg-muted/30">
+                  <span className="text-foreground">Total Pembayaran:</span>
+                  <span className="text-base font-bold text-blue-600 dark:text-blue-400">{formatPrice(getTotalPrice())}</span>
                 </div>
               )}
             </div>

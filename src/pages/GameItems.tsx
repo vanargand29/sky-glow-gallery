@@ -106,7 +106,8 @@ const GameItems = () => {
       price: item.price,
       image_url: item.image_url || undefined,
       type: 'game_item',
-      game: gameName
+      game: gameName,
+      game_id: gameId
     });
     
     toast({

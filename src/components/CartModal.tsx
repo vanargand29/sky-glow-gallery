@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useCart } from '@/contexts/CartContext';
-import { Minus, Plus, Trash2, ShoppingCart } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { recordVoucherUsage } from '@/utils/voucherValidation';
+import { Minus, Plus, Trash2, ShoppingCart, Ticket, X } from 'lucide-react';
 
 interface CartModalProps {
   isOpen: boolean;
@@ -10,7 +13,21 @@ interface CartModalProps {
 }
 
 const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose }) => {
-  const { cartItems, updateQuantity, removeFromCart, getTotalPrice, clearCart } = useCart();
+  const { 
+    cartItems, 
+    updateQuantity, 
+    removeFromCart, 
+    getTotalPrice, 
+    clearCart,
+    appliedVoucher,
+    voucherValidation,
+    applyVoucher,
+    removeVoucher,
+    getDiscountedTotal
+  } = useCart();
+  const { toast } = useToast();
+  const [voucherCode, setVoucherCode] = useState('');
+  const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -20,8 +37,61 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose }) => {
     }).format(price);
   };
 
-  const handleCheckout = () => {
+  const handleVoucherCheck = async () => {
+    if (!voucherCode.trim()) {
+      toast({
+        title: "Error",
+        description: "Masukkan kode voucher terlebih dahulu",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsValidatingVoucher(true);
+    try {
+      const result = await applyVoucher(voucherCode.trim());
+      
+      if (result.isValid) {
+        toast({
+          title: "Voucher Valid!",
+          description: `Diskon ${formatPrice(result.discountAmount || 0)} berhasil diterapkan`,
+        });
+        setVoucherCode('');
+      } else {
+        toast({
+          title: "Voucher Tidak Valid",
+          description: result.message,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Terjadi kesalahan saat memvalidasi voucher",
+        variant: "destructive"
+      });
+    } finally {
+      setIsValidatingVoucher(false);
+    }
+  };
+
+  const handleCheckout = async () => {
     if (cartItems.length === 0) return;
+
+    const { originalTotal, discountAmount, finalTotal } = getDiscountedTotal();
+
+    // Record voucher usage if voucher is applied
+    if (appliedVoucher) {
+      try {
+        await recordVoucherUsage(
+          appliedVoucher.id,
+          originalTotal,
+          discountAmount
+        );
+      } catch (error) {
+        console.error('Error recording voucher usage:', error);
+      }
+    }
 
     // Format message for WhatsApp
     let message = "Halo! Saya ingin memesan item berikut:\n\n";
@@ -33,8 +103,14 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose }) => {
       message += `   Subtotal: ${formatPrice(item.price * item.quantity)}\n\n`;
     });
 
-    message += `Total Keseluruhan: ${formatPrice(getTotalPrice())}\n\n`;
-    message += "Terima kasih!";
+    message += `Total Harga: ${formatPrice(originalTotal)}\n`;
+    
+    if (appliedVoucher && discountAmount > 0) {
+      message += `Voucher (${appliedVoucher.code}): -${formatPrice(discountAmount)}\n`;
+      message += `Total Setelah Diskon: ${formatPrice(finalTotal)}\n`;
+    }
+    
+    message += "\nTerima kasih!";
 
     // Encode message for URL
     const encodedMessage = encodeURIComponent(message);
@@ -45,6 +121,10 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose }) => {
     // Open WhatsApp
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
+
+    // Clear cart and voucher after checkout
+    clearCart();
+    removeVoucher();
   };
 
   if (cartItems.length === 0) {
@@ -208,10 +288,84 @@ const CartModal: React.FC<CartModalProps> = ({ isOpen, onClose }) => {
         </div>
         
         <div className="border-t pt-4 sm:pt-6 mt-3 sm:mt-4 space-y-4 sm:space-y-6 bg-muted/20 -mx-6 px-4 sm:px-6 pb-4 sm:pb-6">
-          <div className="flex justify-between items-center text-lg sm:text-xl font-bold">
-            <span className="text-sm sm:text-base">Total Pembayaran:</span>
-            <span className="text-lg sm:text-2xl text-green-600">{formatPrice(getTotalPrice())}</span>
+          {/* Voucher Section */}
+          <div className="border rounded-lg p-3 sm:p-4 space-y-3 bg-background">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Ticket className="h-4 w-4" />
+              Kode Voucher
+            </div>
+            
+            {appliedVoucher ? (
+              <div className="flex items-center justify-between bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-200 dark:border-green-800 p-3 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Ticket className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-green-700 dark:text-green-300">
+                    {appliedVoucher.code}
+                  </span>
+                  <span className="text-sm font-semibold text-green-600 dark:text-green-400">
+                    (-{formatPrice(getDiscountedTotal().discountAmount)})
+                  </span>
+                </div>
+                <Button
+                  onClick={removeVoucher}
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Masukkan kode voucher"
+                  value={voucherCode}
+                  onChange={(e) => setVoucherCode(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleVoucherCheck()}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleVoucherCheck}
+                  disabled={isValidatingVoucher || !voucherCode.trim()}
+                  variant="outline"
+                  className="px-4"
+                >
+                  {isValidatingVoucher ? 'Cek...' : 'Cek'}
+                </Button>
+              </div>
+            )}
+            
+            {voucherValidation && !voucherValidation.isValid && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 rounded-lg">
+                <p className="text-sm text-red-700 dark:text-red-300 font-medium">
+                  {voucherValidation.message}
+                </p>
+              </div>
+            )}
           </div>
+
+          {/* Total Section */}
+          {appliedVoucher ? (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center text-sm">
+                <span>Subtotal:</span>
+                <span>{formatPrice(getDiscountedTotal().originalTotal)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Diskon:</span>
+                <span className="font-semibold text-green-600 dark:text-green-400">-{formatPrice(getDiscountedTotal().discountAmount)}</span>
+              </div>
+              <div className="flex justify-between items-center text-lg sm:text-xl font-bold border-t pt-2">
+                <span className="text-sm sm:text-base text-foreground">Total Pembayaran:</span>
+                <span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">{formatPrice(getDiscountedTotal().finalTotal)}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-between items-center text-lg sm:text-xl font-bold">
+              <span className="text-sm sm:text-base text-foreground">Total Pembayaran:</span>
+              <span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{formatPrice(getTotalPrice())}</span>
+            </div>
+          )}
           
           <div className="space-y-2 sm:space-y-3">
             <Button

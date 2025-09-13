@@ -43,12 +43,6 @@ const CategoryItems = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // Debug function to test popup
-  const testPopup = () => {
-    alert('Button clicked!');
-    setSelectedImage('https://via.placeholder.com/800x600/FF0000/FFFFFF?text=Test+Image');
-    setIsModalOpen(true);
-  };
 
   const openImageModal = (imageUrl: string, itemName: string) => {
     setSelectedImage(imageUrl);
@@ -67,7 +61,8 @@ const CategoryItems = () => {
       price: item.price,
       image_url: item.image_url,
       type: 'item',
-      category: categoryName
+      category: categoryName,
+      category_id: item.category_id
     });
     
     toast({
@@ -202,75 +197,90 @@ const CategoryItems = () => {
           </Button>
           
           <div className="text-center">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
               {categoryName}
             </h1>
-            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground mb-4 sm:mb-6">
-              Item premium tersedia untuk kategori ini
+            <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto">
+              Koleksi item premium terbaik untuk kategori {categoryName}
             </p>
             
             
             {/* Search and Sort */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-4 sm:mb-6">
-              <div className="w-full sm:w-80 md:w-96">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Cari item..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 w-full text-sm sm:text-base"
-                  />
+            <div className="bg-card/50 backdrop-blur-sm rounded-2xl p-6 border border-border/50 shadow-lg">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <div className="w-full sm:w-80 md:w-96">
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+                    <Input
+                      placeholder="Cari item favorit Anda..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-12 h-12 text-base rounded-xl border-2 focus:border-primary/50 transition-all duration-300"
+                    />
+                  </div>
                 </div>
-              </div>
-              
-              <div className="w-full sm:w-40 md:w-48">
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-full text-sm sm:text-base">
-                    <SelectValue placeholder="Urutkan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="status">Status (Default)</SelectItem>
-                    <SelectItem value="newest">Terbaru</SelectItem>
-                    <SelectItem value="name_asc">Nama (A-Z)</SelectItem>
-                    <SelectItem value="price_desc">Harga Tertinggi</SelectItem>
-                    <SelectItem value="price_asc">Harga Terendah</SelectItem>
-                  </SelectContent>
-                </Select>
+                
+                <div className="w-full sm:w-48 md:w-56">
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="h-12 text-base rounded-xl border-2 focus:border-primary/50 transition-all duration-300">
+                      <SelectValue placeholder="Urutkan berdasarkan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="status">🏆 Status (Default)</SelectItem>
+                      <SelectItem value="newest">🆕 Terbaru</SelectItem>
+                      <SelectItem value="name_asc">📝 Nama (A-Z)</SelectItem>
+                      <SelectItem value="price_desc">💰 Harga Tertinggi</SelectItem>
+                      <SelectItem value="price_asc">💸 Harga Terendah</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
             
             {searchQuery && (
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2 text-center">
-                Hasil pencarian "{searchQuery}": {filteredAndSortedItems.length} item ditemukan
-              </p>
+              <div className="mt-6 text-center">
+                <p className="text-sm sm:text-base text-muted-foreground bg-primary/10 rounded-full px-4 py-2 inline-block">
+                  🔍 Hasil pencarian "{searchQuery}": <span className="font-semibold text-primary">{filteredAndSortedItems.length}</span> item ditemukan
+                </p>
+              </div>
             )}
           </div>
         </div>
 
         {/* Items Grid */}
         {items.length === 0 ? (
-          <div className="text-center py-8 sm:py-12">
-            <p className="text-muted-foreground text-base sm:text-lg">Belum ada item tersedia untuk kategori ini.</p>
-          </div>
-        ) : filteredAndSortedItems.length === 0 ? (
-          <div className="text-center py-8 sm:py-12">
-            <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">🔍</div>
-            <h3 className="text-lg sm:text-xl font-semibold mb-2">Tidak ada item yang ditemukan</h3>
-            <p className="text-sm sm:text-base text-muted-foreground px-4">
-              Coba kata kunci lain atau periksa ejaan "{searchQuery}"
+          <div className="text-center py-12 sm:py-16">
+            <div className="text-6xl sm:text-8xl mb-6">📦</div>
+            <h3 className="text-xl sm:text-2xl font-bold mb-4">Kategori Masih Kosong</h3>
+            <p className="text-muted-foreground text-base sm:text-lg max-w-md mx-auto">
+              Belum ada item tersedia untuk kategori ini. Silakan cek kembali nanti!
             </p>
           </div>
+        ) : filteredAndSortedItems.length === 0 ? (
+          <div className="text-center py-12 sm:py-16">
+            <div className="text-6xl sm:text-8xl mb-6">🔍</div>
+            <h3 className="text-xl sm:text-2xl font-bold mb-4">Tidak ada item yang ditemukan</h3>
+            <p className="text-base sm:text-lg text-muted-foreground px-4 max-w-md mx-auto">
+              Coba kata kunci lain atau periksa ejaan "{searchQuery}"
+            </p>
+            <Button 
+              variant="outline" 
+              onClick={() => setSearchQuery('')}
+              className="mt-6"
+            >
+              Hapus Pencarian
+            </Button>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
             {filteredAndSortedItems.map((item) => (
-              <Card key={item.id} className="game-card group overflow-hidden hover:shadow-lg transition-all duration-300">
-                <div className="relative h-40 sm:h-48 overflow-hidden">
+              <Card key={item.id} className="group overflow-hidden hover:shadow-2xl hover:shadow-primary/20 transition-all duration-500 border-0 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm">
+                <div className="relative h-48 sm:h-56 overflow-hidden">
                   {item.image_url ? (
                     <img
                       src={item.image_url}
                       alt={item.name}
-                      className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300 cursor-pointer"
+                      className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500 cursor-pointer"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = '/placeholder.svg';
@@ -278,37 +288,38 @@ const CategoryItems = () => {
                       onMouseDown={() => openImageModal(item.image_url!, item.name)}
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center">
-                      <div className="text-4xl sm:text-6xl opacity-50">🎵</div>
+                    <div className="w-full h-full bg-gradient-to-br from-primary/20 via-accent/20 to-secondary/20 flex items-center justify-center">
+                      <div className="text-5xl sm:text-7xl opacity-60">🎵</div>
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
-                  <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none"></div>
+                  <div className="absolute top-4 right-4">
                     <div 
-                      className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium"
+                      className="px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-sm shadow-lg"
                       style={getStatusBadgeStyle(item.status)}
                     >
                       {item.status || 'Tersedia'}
                     </div>
                   </div>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-primary/30 to-transparent pointer-events-none"></div>
                 </div>
                 
-                <CardContent className="p-4 sm:p-6">
-                  <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3 line-clamp-2">{item.name}</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground mb-3 sm:mb-4 line-clamp-2 sm:line-clamp-3">
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-bold mb-3 line-clamp-2 group-hover:text-primary transition-colors duration-300">{item.name}</h3>
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-3 leading-relaxed">
                     {item.description}
                   </p>
                   
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-                    <div className="text-base sm:text-lg font-semibold text-accent">
+                  <div className="flex flex-col gap-4">
+                    <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                       {formatPrice(item.price)}
                     </div>
                     <Button 
-                      className="btn-primary w-full sm:w-auto text-sm sm:text-base"
+                      className="w-full h-12 text-base font-semibold bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 transition-all duration-300 shadow-lg hover:shadow-xl"
                       onClick={() => handleAddToCart(item)}
                     >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      Beli Sekarang
+                      <ShoppingCart className="h-5 w-5 mr-2" />
+                      Tambah ke Keranjang
                     </Button>
                   </div>
                 </CardContent>
@@ -317,59 +328,28 @@ const CategoryItems = () => {
           </div>
         )}
         
-        {/* Image Popup Modal using Portal */}
+        {/* Enhanced Image Popup Modal */}
         {isModalOpen && selectedImage && createPortal(
           <div 
-            style={{ 
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.9)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 999999,
-              padding: '20px'
-            }}
+            className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[999999] p-4 animate-in fade-in duration-300"
             onMouseDown={closeModal}
           >
-            <div style={{ position: 'relative' }}>
-              <button
-                style={{
-                  position: 'absolute',
-                  top: '-40px',
-                  right: '0',
-                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '40px',
-                  height: '40px',
-                  fontSize: '24px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
+            <div className="relative max-w-7xl max-h-full">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute -top-12 right-0 h-10 w-10 rounded-full bg-black/50 hover:bg-black/70 text-white border-white/20"
                 onMouseDown={(e) => {
                   e.stopPropagation();
                   closeModal();
                 }}
               >
-                ×
-              </button>
+                <X className="h-5 w-5" />
+              </Button>
               <img
                 src={selectedImage}
                 alt="Preview"
-                style={{
-                  maxWidth: '90vw',
-                  maxHeight: '90vh',
-                  objectFit: 'contain',
-                  borderRadius: '8px',
-                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-                }}
+                className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl shadow-2xl"
                 onMouseDown={(e) => e.stopPropagation()}
               />
             </div>

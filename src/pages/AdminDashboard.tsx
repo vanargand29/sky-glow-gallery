@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Edit, Trash2, Package, Tag, LogOut, Gamepad2, MessageSquare, Upload, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Tag, LogOut, Gamepad2, MessageSquare, Upload, X, Ticket, Calendar, Users, RefreshCw } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -62,6 +62,30 @@ interface Review {
   created_at: string;
 }
 
+interface Voucher {
+  id: string;
+  code: string;
+  discount_amount: number;
+  usage_limit?: number;
+  usage_count: number;
+  valid_from?: string;
+  valid_until?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  applicable_games?: string[];
+  applicable_categories?: string[];
+}
+
+interface VoucherUsage {
+  id: string;
+  voucher_id: string;
+  used_at: string;
+  cart_total: number;
+  discount_applied: number;
+  user_info?: any;
+}
+
 const AdminDashboard = () => {
   const { logout } = useAuth();
   const { toast } = useToast();
@@ -90,6 +114,8 @@ const AdminDashboard = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [gameItems, setGameItems] = useState<GameItem[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [voucherUsages, setVoucherUsages] = useState<VoucherUsage[]>([]);
   const [selectedGameFilter, setSelectedGameFilter] = useState<string>('all');
   const [gameItemSearch, setGameItemSearch] = useState<string>('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
@@ -139,6 +165,21 @@ const AdminDashboard = () => {
   });
   const [gameItemImageFile, setGameItemImageFile] = useState<File | null>(null);
   const [gameItemImagePreview, setGameItemImagePreview] = useState<string>('');
+
+  // Voucher form state
+  const [voucherForm, setVoucherForm] = useState({
+    id: '',
+    code: '',
+    discount_amount: '',
+    usage_limit: '',
+    usage_count: 0,
+    valid_from: '',
+    valid_until: '',
+    is_active: true,
+    applicable_games: [] as string[],
+    applicable_categories: [] as string[]
+  });
+  const [voucherDialogOpen, setVoucherDialogOpen] = useState(false);
   const [gameItemDialogOpen, setGameItemDialogOpen] = useState(false);
 
   // Filtered game items based on selected game and search
@@ -169,6 +210,8 @@ const AdminDashboard = () => {
     fetchGames();
     fetchGameItems();
     fetchReviews();
+    fetchVouchers();
+    fetchVoucherUsages();
   }, []);
 
   const fetchCategories = async () => {
@@ -267,6 +310,57 @@ const AdminDashboard = () => {
       toast({
         title: "Error",
         description: "Gagal memuat reviews",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const fetchVouchers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('vouchers' as any)
+        .select(`
+          *,
+          voucher_applicable_categories (
+            category_id,
+            categories (name)
+          ),
+          voucher_applicable_games (
+            game_id,
+            games (name)
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setVouchers(data as any || []);
+    } catch (error) {
+      console.error('Error fetching vouchers:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat vouchers",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const fetchVoucherUsages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('voucher_usage' as any)
+        .select(`
+          *,
+          vouchers (code)
+        `)
+        .order('used_at', { ascending: false });
+
+      if (error) throw error;
+      setVoucherUsages(data as any || []);
+    } catch (error) {
+      console.error('Error fetching voucher usages:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat voucher usage",
         variant: "destructive"
       });
     }
@@ -870,6 +964,263 @@ const AdminDashboard = () => {
     setGameItemForm(prev => ({ ...prev, image_url: '' }));
   };
 
+  const updateVoucherApplicableItems = async (voucherId: string, formData?: any) => {
+    const currentForm = formData || voucherForm;
+    console.log('=== UPDATING VOUCHER APPLICABLE ITEMS ===');
+    console.log('Voucher ID:', voucherId);
+    console.log('Current form data:', currentForm);
+    console.log('Categories to save:', currentForm.applicable_categories);
+    console.log('Games to save:', currentForm.applicable_games);
+
+    try {
+      // Delete existing applicable categories and games
+      console.log('Deleting existing applicable items...');
+      const { error: deleteCategories } = await supabase.from('voucher_applicable_categories' as any).delete().eq('voucher_id', voucherId);
+      const { error: deleteGames } = await supabase.from('voucher_applicable_games' as any).delete().eq('voucher_id', voucherId);
+      
+      if (deleteCategories) console.error('Error deleting categories:', deleteCategories);
+      if (deleteGames) console.error('Error deleting games:', deleteGames);
+
+      // Insert new applicable categories
+      if (currentForm.applicable_categories && currentForm.applicable_categories.length > 0) {
+        const categoryInserts = currentForm.applicable_categories
+          .filter((id: any) => id !== null && id !== undefined && id !== '')
+          .map((categoryId: string) => ({
+            voucher_id: voucherId,
+            category_id: categoryId
+          }));
+        
+        console.log('Inserting categories:', categoryInserts);
+        
+        if (categoryInserts.length > 0) {
+          const { data: categoryData, error: categoryError } = await supabase
+            .from('voucher_applicable_categories' as any)
+            .insert(categoryInserts)
+            .select();
+          
+          if (categoryError) {
+            console.error('Category insert error:', categoryError);
+            throw categoryError;
+          }
+          console.log('Categories inserted successfully:', categoryData);
+        }
+      }
+
+      // Insert new applicable games
+      if (currentForm.applicable_games && currentForm.applicable_games.length > 0) {
+        const gameInserts = currentForm.applicable_games
+          .filter((id: any) => id !== null && id !== undefined && id !== '')
+          .map((gameId: string) => ({
+            voucher_id: voucherId,
+            game_id: gameId
+          }));
+        
+        console.log('Inserting games:', gameInserts);
+        
+        if (gameInserts.length > 0) {
+          const { data: gameData, error: gameError } = await supabase
+            .from('voucher_applicable_games' as any)
+            .insert(gameInserts)
+            .select();
+          
+          if (gameError) {
+            console.error('Game insert error:', gameError);
+            throw gameError;
+          }
+          console.log('Games inserted successfully:', gameData);
+        }
+      }
+
+      console.log('=== VOUCHER APPLICABLE ITEMS UPDATE COMPLETED ===');
+    } catch (error) {
+      console.error('Error in updateVoucherApplicableItems:', error);
+      throw error;
+    }
+  };
+
+  const handleVoucherSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveVoucher();
+  };
+
+  const saveVoucher = async () => {
+    if (!voucherForm.code || !voucherForm.discount_amount) {
+      toast({
+        title: "Error",
+        description: "Kode voucher dan jumlah diskon harus diisi",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    console.log('Saving voucher with form data:', voucherForm);
+
+    try {
+      const voucherData = {
+        code: voucherForm.code,
+        discount_amount: parseInt(voucherForm.discount_amount),
+        usage_limit: voucherForm.usage_limit ? parseInt(voucherForm.usage_limit) : null,
+        valid_from: voucherForm.valid_from || null,
+        valid_until: voucherForm.valid_until || null,
+        is_active: voucherForm.is_active
+      };
+
+      console.log('Voucher data to save:', voucherData);
+
+      if (voucherForm.id) {
+        // Update voucher
+        const { error } = await supabase
+          .from('vouchers' as any)
+          .update(voucherData)
+          .eq('id', voucherForm.id);
+
+        if (error) throw error;
+
+        // Update applicable items
+        await updateVoucherApplicableItems(voucherForm.id);
+        
+        toast({
+          title: "Berhasil",
+          description: "Voucher berhasil diupdate"
+        });
+      } else {
+        // Create voucher
+        console.log('Creating new voucher...');
+        const { data: newVoucher, error } = await supabase
+          .from('vouchers' as any)
+          .insert([voucherData])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating voucher:', error);
+          throw error;
+        }
+
+        console.log('New voucher created:', newVoucher);
+
+        // Add applicable items - pass current form data before reset
+        if (newVoucher) {
+          await updateVoucherApplicableItems(newVoucher.id, voucherForm);
+        }
+        
+        toast({
+          title: "Berhasil",
+          description: "Voucher berhasil ditambahkan"
+        });
+      }
+
+      console.log('Resetting voucher form after save');
+      setVoucherForm({
+        id: '',
+        code: '',
+        discount_amount: '',
+        usage_limit: '',
+        usage_count: 0,
+        valid_from: '',
+        valid_until: '',
+        is_active: true,
+        applicable_categories: [],
+        applicable_games: []
+      });
+      setVoucherDialogOpen(false);
+      fetchVouchers();
+    } catch (error) {
+      console.error('Error saving voucher:', error);
+      toast({
+        title: "Error",
+        description: "Gagal menyimpan voucher",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const generateRandomCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const deleteVoucher = async (id: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus voucher ini?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('vouchers' as any)
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      toast({
+        title: "Berhasil",
+        description: "Voucher berhasil dihapus"
+      });
+      
+      fetchVouchers();
+    } catch (error) {
+      console.error('Error deleting voucher:', error);
+      toast({
+        title: "Error",
+        description: "Gagal menghapus voucher",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const editVoucher = (voucher: any) => {
+    console.log('Editing voucher:', voucher);
+    const applicableGames = voucher.voucher_applicable_games?.map((g: any) => g.game_id) || [];
+    const applicableCategories = voucher.voucher_applicable_categories?.map((c: any) => c.category_id) || [];
+    
+    console.log('Applicable games:', applicableGames);
+    console.log('Applicable categories:', applicableCategories);
+    
+    setVoucherForm({
+      id: voucher.id,
+      code: voucher.code,
+      discount_amount: voucher.discount_amount.toString(),
+      usage_limit: voucher.usage_limit?.toString() || '',
+      usage_count: voucher.usage_count || 0,
+      valid_from: voucher.valid_from ? voucher.valid_from.split('T')[0] : '',
+      valid_until: voucher.valid_until ? voucher.valid_until.split('T')[0] : '',
+      is_active: voucher.is_active,
+      applicable_games: applicableGames,
+      applicable_categories: applicableCategories
+    });
+    setVoucherDialogOpen(true);
+  };
+
+  const toggleVoucherStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('vouchers' as any)
+        .update({ is_active: !currentStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      toast({
+        title: "Berhasil",
+        description: `Voucher berhasil ${!currentStatus ? 'diaktifkan' : 'dinonaktifkan'}`
+      });
+      
+      fetchVouchers();
+    } catch (error) {
+      console.error('Error toggling voucher status:', error);
+      toast({
+        title: "Error",
+        description: "Gagal mengubah status voucher",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -921,6 +1272,13 @@ const AdminDashboard = () => {
           >
             <MessageSquare className="h-4 w-4 mr-2" />
             Reviews
+          </Button>
+          <Button
+            variant={activeTab === 'vouchers' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('vouchers')}
+          >
+            <Ticket className="h-4 w-4 mr-2" />
+            Vouchers
           </Button>
         </div>
 
@@ -1660,6 +2018,314 @@ const AdminDashboard = () => {
                             variant="destructive" 
                             onClick={() => deleteReview(review.id)}
                           >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Vouchers Tab */}
+        {activeTab === 'vouchers' && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-semibold">Manajemen Vouchers</h2>
+              <Dialog open={voucherDialogOpen} onOpenChange={setVoucherDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => {
+                    setVoucherForm({
+                      id: '',
+                      code: '',
+                      discount_amount: '',
+                      usage_limit: '',
+                      usage_count: 0,
+                      valid_from: '',
+                      valid_until: '',
+                      is_active: true,
+                      applicable_games: [],
+                      applicable_categories: []
+                    });
+                    // Refresh data when opening voucher dialog
+                    fetchItems();
+                    fetchGameItems();
+                  }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Tambah Voucher
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {voucherForm.id ? 'Edit Voucher' : 'Tambah Voucher'}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleVoucherSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="voucher-code">Kode Voucher</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="voucher-code"
+                            value={voucherForm.code}
+                            onChange={(e) => setVoucherForm(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                            placeholder="DISKON50"
+                            required
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setVoucherForm(prev => ({ ...prev, code: generateRandomCode() }))}
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="voucher-discount">Diskon (Rp)</Label>
+                        <Input
+                          id="voucher-discount"
+                          type="number"
+                          value={voucherForm.discount_amount}
+                          onChange={(e) => setVoucherForm(prev => ({ ...prev, discount_amount: e.target.value }))}
+                          placeholder="5000"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="voucher-usage-limit">Batas Penggunaan</Label>
+                        <Input
+                          id="voucher-usage-limit"
+                          type="number"
+                          value={voucherForm.usage_limit}
+                          onChange={(e) => setVoucherForm(prev => ({ ...prev, usage_limit: e.target.value }))}
+                          placeholder="Kosongkan untuk unlimited"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2 pt-6">
+                        <input
+                          type="checkbox"
+                          id="voucher-active"
+                          checked={voucherForm.is_active}
+                          onChange={(e) => setVoucherForm(prev => ({ ...prev, is_active: e.target.checked }))}
+                          className="rounded"
+                        />
+                        <Label htmlFor="voucher-active">Aktif</Label>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="voucher-valid-from">Berlaku Dari</Label>
+                        <Input
+                          id="voucher-valid-from"
+                          type="date"
+                          value={voucherForm.valid_from}
+                          onChange={(e) => setVoucherForm(prev => ({ ...prev, valid_from: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="voucher-valid-until">Berlaku Sampai</Label>
+                        <Input
+                          id="voucher-valid-until"
+                          type="date"
+                          value={voucherForm.valid_until}
+                          onChange={(e) => setVoucherForm(prev => ({ ...prev, valid_until: e.target.value }))}
+                          placeholder="Kosongkan untuk tidak ada batas"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Game Selection */}
+                      <div>
+                        <Label htmlFor="game-select">🎮 Pilih Game (Opsional)</Label>
+                        <select
+                          id="game-select"
+                          value={voucherForm.applicable_games[0] || ''}
+                          onChange={(e) => {
+                            const gameId = e.target.value;
+                            console.log('Game dropdown changed:', gameId);
+                            console.log('Current form before update:', voucherForm);
+                            setVoucherForm(prev => {
+                              const newForm = {
+                                ...prev,
+                                applicable_games: gameId ? [gameId] : [],
+                                applicable_categories: gameId ? [] : prev.applicable_categories
+                              };
+                              console.log('New form after game selection:', newForm);
+                              return newForm;
+                            });
+                          }}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">-- Pilih Game --</option>
+                          {games?.map((game) => (
+                            <option key={game.id} value={game.id}>
+                              {game.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Category Selection */}
+                      <div>
+                        <Label htmlFor="category-select">🌟 Pilih Kategori Sky (Opsional)</Label>
+                        <select
+                          id="category-select"
+                          value={voucherForm.applicable_categories[0] || ''}
+                          onChange={(e) => {
+                            const categoryId = e.target.value;
+                            console.log('Category dropdown changed:', categoryId);
+                            console.log('Current form before update:', voucherForm);
+                            setVoucherForm(prev => {
+                              const newForm = {
+                                ...prev,
+                                applicable_categories: categoryId ? [categoryId] : [],
+                                applicable_games: categoryId ? [] : prev.applicable_games
+                              };
+                              console.log('New form after category selection:', newForm);
+                              return newForm;
+                            });
+                          }}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">-- Pilih Kategori --</option>
+                          {categories?.map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Info Text */}
+                    <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                      <p className="font-medium mb-1">ℹ️ Informasi:</p>
+                      <ul className="text-xs space-y-1 list-disc list-inside">
+                        <li>Pilih game atau kategori untuk membatasi voucher pada item tertentu</li>
+                        <li>Jika tidak memilih apapun, voucher berlaku untuk semua item</li>
+                        <li>Hanya bisa memilih satu game ATAU satu kategori, tidak keduanya</li>
+                      </ul>
+                    </div>
+
+                    {/* No Items Message */}
+                    {(!games || games.length === 0) && (!categories || categories.length === 0) && (
+                      <div className="text-center text-gray-500 py-4 border rounded-md">
+                        <p className="text-sm">Belum ada games atau categories yang tersedia.</p>
+                        <p className="text-xs">Tambahkan games atau sky categories terlebih dahulu.</p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <Button type="submit" className="flex-1">
+                        {voucherForm.id ? 'Update' : 'Tambah'}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setVoucherDialogOpen(false)}>
+                        Batal
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="grid gap-4">
+              {vouchers.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Ticket className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Belum Ada Vouchers</h3>
+                    <p className="text-muted-foreground">
+                      Voucher diskon akan muncul di sini setelah ditambahkan
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                vouchers.map((voucher) => (
+                  <Card key={voucher.id}>
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-3">
+                            <h3 className="text-xl font-semibold">{voucher.code}</h3>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              voucher.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {voucher.is_active ? 'Aktif' : 'Nonaktif'}
+                            </span>
+                            {voucher.usage_limit && (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {voucher.usage_count}/{voucher.usage_limit} digunakan
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mb-3">
+                            <span>Diskon: Rp {voucher.discount_amount.toLocaleString('id-ID')}</span>
+                            <span>Penggunaan: {voucher.usage_count} kali</span>
+                            {voucher.valid_from && (
+                              <span>Berlaku dari: {new Date(voucher.valid_from).toLocaleDateString('id-ID')}</span>
+                            )}
+                            {voucher.valid_until && (
+                              <span>Berlaku sampai: {new Date(voucher.valid_until).toLocaleDateString('id-ID')}</span>
+                            )}
+                          </div>
+
+                          <div className="text-sm text-muted-foreground">
+                            <p>Berlaku untuk: {
+                              (() => {
+                                console.log('Voucher data:', voucher);
+                                console.log('Applicable categories:', (voucher as any).voucher_applicable_categories);
+                                console.log('Applicable games:', (voucher as any).voucher_applicable_games);
+                                
+                                const categoryNames = (voucher as any).voucher_applicable_categories?.map((cat: any) => {
+                                  console.log('Category item:', cat);
+                                  return cat.categories?.name;
+                                }).filter(Boolean) || [];
+                                
+                                const gameNames = (voucher as any).voucher_applicable_games?.map((game: any) => {
+                                  console.log('Game item:', game);
+                                  return game.games?.name;
+                                }).filter(Boolean) || [];
+                                
+                                console.log('Category names:', categoryNames);
+                                console.log('Game names:', gameNames);
+                                
+                                if (categoryNames.length === 0 && gameNames.length === 0) {
+                                  return 'Semua item';
+                                }
+                                
+                                const items = [...categoryNames, ...gameNames];
+                                console.log('Final items:', items);
+                                return items.join(', ');
+                              })()
+                            }</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => toggleVoucherStatus(voucher.id, voucher.is_active)}
+                          >
+                            {voucher.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => editVoucher(voucher)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => deleteVoucher(voucher.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

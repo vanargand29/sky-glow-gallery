@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { validateVoucher, calculateDiscountedTotal, VoucherValidationResult } from '@/utils/voucherValidation';
 
 export interface CartItem {
   id: string;
@@ -7,7 +8,9 @@ export interface CartItem {
   image_url?: string;
   type: 'item' | 'game_item';
   category?: string;
+  category_id?: number;
   game?: string;
+  game_id?: number;
   quantity: number;
 }
 
@@ -19,6 +22,12 @@ interface CartContextType {
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
+  // Voucher functionality
+  appliedVoucher: any;
+  voucherValidation: VoucherValidationResult | null;
+  applyVoucher: (voucherCode: string) => Promise<VoucherValidationResult>;
+  removeVoucher: () => void;
+  getDiscountedTotal: () => { originalTotal: number; discountAmount: number; finalTotal: number };
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -37,6 +46,8 @@ interface CartProviderProps {
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [appliedVoucher, setAppliedVoucher] = useState<any>(null);
+  const [voucherValidation, setVoucherValidation] = useState<VoucherValidationResult | null>(null);
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -102,6 +113,27 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
+  // Voucher functions
+  const applyVoucher = async (voucherCode: string): Promise<VoucherValidationResult> => {
+    const result = await validateVoucher(voucherCode, cartItems);
+    setVoucherValidation(result);
+    
+    if (result.isValid && result.voucher) {
+      setAppliedVoucher(result.voucher);
+    }
+    
+    return result;
+  };
+
+  const removeVoucher = () => {
+    setAppliedVoucher(null);
+    setVoucherValidation(null);
+  };
+
+  const getDiscountedTotal = () => {
+    return calculateDiscountedTotal(cartItems, appliedVoucher);
+  };
+
   const value: CartContextType = {
     cartItems,
     addToCart,
@@ -109,7 +141,12 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     updateQuantity,
     clearCart,
     getTotalItems,
-    getTotalPrice
+    getTotalPrice,
+    appliedVoucher,
+    voucherValidation,
+    applyVoucher,
+    removeVoucher,
+    getDiscountedTotal
   };
 
   return (
